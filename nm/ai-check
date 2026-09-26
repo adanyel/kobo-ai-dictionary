@@ -1,0 +1,1 @@
+menu_item :reader :AI Dictionary - Verifica installazione :cmd_output :9000:quiet:/bin/sh /mnt/onboard/.adds/ai-check-install.sh
