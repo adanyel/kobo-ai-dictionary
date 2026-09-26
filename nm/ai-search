@@ -1,0 +1,1 @@
+menu_item :reader :AI Dictionary - Cerca parola :cmd_spawn :quiet:/bin/sh /mnt/onboard/.adds/ai-search.sh
