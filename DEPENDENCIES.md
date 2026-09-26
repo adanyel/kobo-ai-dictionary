@@ -1,125 +1,163 @@
-# Dependencies
+# Dipendenze
 
-This project is a shell-based AI dictionary for the Kobo Libra Colour.
+Questa pagina documenta le dipendenze reali usate dalla configurazione funzionante di Kobo AI Dictionary.
 
-The repository contains the project code and documentation. Third-party Kobo utilities are **not bundled** in this repository unless their redistribution terms are verified.
+Il progetto è stato validato su **Kobo Libra Colour, firmware 4.45.23792**.
 
-## Required platform
+## Riepilogo
 
-- Kobo Libra Colour
-- Kobo firmware: 4.45.23792 (validated during development)
-- Native Kobo/Nickel UI
-- NickelMenu
-- NickelDBus
-
-## Runtime tools
-
-The working setup uses these executables:
-
-| Tool | Required path on Kobo | Role | Source / status |
+| Componente | Percorso/uso | Provenienza | Incluso qui? |
 |---|---|---|---|
-| `curl` | `/usr/bin/curl` | HTTPS requests to the Gemini API | KoboStuff 1.6.N-r18901 |
-| `jq` | `/usr/bin/jq` | JSON construction and parsing | KoboStuff 1.6.N-r18901 |
-| `sqlite3` | `/mnt/onboard/.adds/ai-tools/sqlite3` | Read KoboReader.sqlite | Kobo-UNCaGED |
-| `unzip` | `/usr/bin/unzip` | Read EPUB ZIP contents | Origin not yet verified |
-| `kobo-context` | `/mnt/onboard/.adds/ai-tools/kobo-context` | Extract reading-position context from an EPUB | Project-specific ARMv7 helper; installed manually |
+| NickelMenu | integrazione nel menu Kobo | pgaskin/NickelMenu | No |
+| NickelDBus | controllo dialog/browser Nickel | shermp/NickelDBus | No |
+| qndb | `/usr/bin/qndb` | installato da NickelDBus | No |
+| curl | `/usr/bin/curl` | KoboStuff | No |
+| jq | `/usr/bin/jq` | KoboStuff | No |
+| unzip | `/usr/bin/unzip` | utility BusyBox/core; presente nel setup con KoboStuff | No |
+| sqlite3 | `.adds/ai-tools/sqlite3` | binario ricavato da Kobo-UNCaGED | No |
+| kobo-context | `.adds/ai-tools/kobo-context` | questo progetto | **Sì** |
+| Gemini API key | `.adds/gemini.key` | Google AI Studio / utente | No |
+| KoboReader.sqlite | `.kobo/KoboReader.sqlite` | firmware Kobo | già sul dispositivo |
 
-## External projects
-
-### KoboStuff
-
-Version used in the validated setup:
-
-`kobo-stuff-1.6.N-r18901.tar.xz`
-
-Repository reference:
-
-https://github.com/usetrmnl/trmnl-kobo
-
-The archive is preserved there under:
-
-`doc/distrib/kobostuff/kobo-stuff-1.6.N-r18901.tar.xz`
-
-KoboStuff is the documented source for the `curl` and `jq` utilities used by this project.
-
-### Kobo-UNCaGED
-
-Repository:
-
-https://github.com/shermp/Kobo-UNCaGED
-
-The Kobo-UNCaGED build system compiles and packages a Kobo ARM `sqlite3` binary as:
-
-`.adds/kobo-uncaged/bin/sqlite3`
-
-For this project, that binary is placed manually at:
-
-`/mnt/onboard/.adds/ai-tools/sqlite3`
-
-Kobo-UNCaGED also packages NickelDBus.
-
-### NickelMenu
+## NickelMenu
 
 Repository:
 
 https://github.com/pgaskin/NickelMenu
 
-NickelMenu is used to expose/launch the dictionary from the native Kobo interface.
+NickelMenu permette di aggiungere le voci:
 
-### NickelDBus
+- `AI Dictionary` nella selezione del testo;
+- `AI Dictionary - Cerca parola` nel reader;
+- `AI Dictionary - Verifica installazione`.
+
+NickelMenu dichiara attualmente che firmware Kobo 5.x non è supportato.
+
+## NickelDBus e qndb
 
 Repository:
 
 https://github.com/shermp/NickelDBus
 
-NickelDBus is required by the validated Kobo integration used to display/control the result from the native UI.
+Il progetto usa NickelDBus per aprire la finestra di input della ricerca manuale e interagire con Nickel.
 
-## API key
+Il Makefile ufficiale di NickelDBus installa esplicitamente:
 
-Create this file on the Kobo:
+`src/cli/qndb:/usr/bin/qndb`
 
-`/mnt/onboard/.adds/gemini.key`
+Quindi `/usr/bin/qndb` non è un file del firmware Kobo standard: arriva da NickelDBus.
 
-It must contain the Gemini API key only.
+## KoboStuff
 
-**Never commit or upload the API key to GitHub.**
+Progetto originale/discussione:
 
-## Kobo database
+https://www.mobileread.com/forums/showthread.php?t=254214
 
-The script reads this database in read-only mode:
+Archivio usato nel setup validato:
 
-`/mnt/onboard/.kobo/KoboReader.sqlite`
+`kobo-stuff-1.6.N-r18901.tar.xz`
 
-The database is part of the Kobo device and must not be copied into this repository.
+Mirror archivistico:
 
-## kobo-context
+https://github.com/usetrmnl/trmnl-kobo/tree/main/doc/distrib/kobostuff
 
-`kobo-context` is the project-specific ARMv7 helper used by the validated setup.
+KoboStuff è la fonte usata per:
 
-Repository path:
+- `/usr/bin/curl`;
+- `/usr/bin/jq`;
+- utility shell/core aggiuntive.
 
-`ai-tools/kobo-context`
+### unzip
 
-Install it on the Kobo at:
-
-`/mnt/onboard/.adds/ai-tools/kobo-context`
-
-Validated binary properties:
-
-- ELF 32-bit LSB executable
-- ARM, EABI5
-- statically linked
-- stripped
-- SHA-256: `90081b09970f5e8478896d881590f82779ba1549fc9c7a1b76633c56c9cf4484`
-
-The executable must have execute permission on the Kobo.
-
-## Open item: unzip provenance
-
-The validated runtime requires:
+Lo script richiede:
 
 `/usr/bin/unzip`
 
-The executable was present and working on the validated Kobo, but the original installation source has not yet been established from the preserved project material.
+Nel dispositivo validato questo eseguibile è presente e funzionante nello stesso ambiente in cui è installato KoboStuff.
 
-Until that is verified, installation documentation must treat `unzip` as a separate prerequisite rather than incorrectly attributing it to KoboStuff, NickelMenu, or KOReader.
+KoboStuff documenta modifiche e ampliamenti a BusyBox. BusyBox include l'applet `unzip` e la definisce con destinazione `/usr/bin`.
+
+Non è stato trovato un manifest testuale pubblico dell'esatto archivio KoboStuff `1.6.N-r18901` che consenta di attribuire con certezza assoluta ogni singolo file installato.
+
+Per questo:
+
+1. KoboStuff resta il percorso d'installazione consigliato per le utility;
+2. la presenza di `/usr/bin/unzip` viene verificata dallo script `check-install.sh`;
+3. non viene copiata nel repository una versione casuale di `unzip`.
+
+## sqlite3
+
+Fonte verificata:
+
+https://github.com/shermp/Kobo-UNCaGED
+
+Il Makefile ufficiale di Kobo-UNCaGED compila SQLite e inserisce il binario nel pacchetto come:
+
+`.adds/kobo-uncaged/bin/sqlite3`
+
+Per Kobo AI Dictionary il binario viene copiato manualmente in:
+
+`/mnt/onboard/.adds/ai-tools/sqlite3`
+
+Non è necessario usare Kobo-UNCaGED come applicazione.
+
+## kobo-context
+
+Incluso nel repository:
+
+`ai-tools/kobo-context`
+
+Installazione sul Kobo:
+
+`/mnt/onboard/.adds/ai-tools/kobo-context`
+
+Binario validato:
+
+- ELF 32-bit LSB;
+- ARM, EABI5;
+- staticamente linkato;
+- stripped;
+- dimensione: 2,031,768 byte;
+- SHA-256: `90081b09970f5e8478896d881590f82779ba1549fc9c7a1b76633c56c9cf4484`.
+
+## Gemini API
+
+Documentazione ufficiale:
+
+https://ai.google.dev/gemini-api/docs/api-key
+
+La chiave viene letta da:
+
+`/mnt/onboard/.adds/gemini.key`
+
+Il file deve contenere soltanto la chiave.
+
+La chiave **non deve essere caricata su GitHub**.
+
+## Database Kobo
+
+Lo script legge:
+
+`/mnt/onboard/.kobo/KoboReader.sqlite`
+
+in modalità read-only per ottenere libro e posizione di lettura.
+
+Il database non fa parte del progetto e non deve essere pubblicato.
+
+## Utility standard
+
+Lo script usa inoltre normali comandi shell come `sed`, `awk`, `grep`, `cut`, `tr`, `head`, `cat`, `cp`, `mv` e `rm`.
+
+Queste utility fanno parte dell'ambiente Linux/Kobo e/o del layer di utility installato sul dispositivo. La configurazione validata le dispone già.
+
+## Perché le dipendenze esterne non vengono copiate qui
+
+Alcuni componenti potrebbero tecnicamente essere ridistribuiti, ma non è la scelta predefinita del progetto perché:
+
+- NickelMenu e NickelDBus hanno release ufficiali proprie;
+- KoboStuff contiene molte utility e componenti con licenze differenti;
+- Kobo-UNCaGED ha la propria licenza e il proprio ciclo di release;
+- duplicare binari di terzi rende più facile distribuire versioni obsolete;
+- è più chiaro separare il codice di Kobo AI Dictionary dalle sue dipendenze.
+
+Vedi [THIRD_PARTY.md](THIRD_PARTY.md).
