@@ -1,105 +1,97 @@
-# Risoluzione problemi
+# Troubleshooting
 
-## Non compare AI Dictionary
+## AI Dictionary does not appear
 
-Controlla che NickelMenu sia installato e che esistano:
+Check that NickelMenu is installed and these files exist:
 
 `.adds/nm/ai-dictionary`
 
 `.adds/nm/ai-search`
 
-Dopo aver copiato o modificato i file, riavvia il Kobo.
+Restart the Kobo after copying or changing menu files.
 
-## Non compare la ricerca manuale o la tastiera
+## Manual search or keyboard does not appear
 
-La ricerca manuale usa:
+Manual search requires:
 
 `/usr/bin/qndb`
 
-Questo file viene installato da NickelDBus.
+This executable is installed by NickelDBus.
 
-Reinstalla NickelDBus dalla release ufficiale se la verifica segnala `qndb` come mancante.
+Reinstall NickelDBus from its official release if the installation checker reports `qndb` as missing.
 
-## Errore sqlite3 non trovato
+## sqlite3 not found
 
-Il file deve trovarsi esattamente qui:
+The file must be exactly here:
 
 `.adds/ai-tools/sqlite3`
 
-Puoi ricavarlo dal pacchetto Kobo-UNCaGED, dove si trova normalmente in:
+A verified source is the Kobo-UNCaGED release package, where it is normally located at:
 
 `.adds/kobo-uncaged/bin/sqlite3`
 
-## Errore unzip non trovato
+## unzip not found
 
-Lo script richiede:
+The script requires:
 
 `/usr/bin/unzip`
 
-Installa KoboStuff e poi usa:
+Install KoboStuff and run:
 
-**AI Dictionary - Verifica installazione**
+**AI Dictionary - Check installation**
 
-Se `unzip` continua a risultare mancante, non sostituirlo con un eseguibile casuale per un'altra architettura: serve un binario compatibile con il Kobo ARM.
+If `unzip` is still missing, do not copy a random executable built for another architecture. The Kobo needs an ARM-compatible binary.
 
-## Gemini API key non trovata
+## Gemini API key not found
 
-Controlla il file:
+Check:
 
 `.adds/gemini.key`
 
-Deve:
+The file must:
 
-- essere un normale file di testo;
-- contenere la chiave e niente altro;
-- non chiamarsi `gemini.key.txt`.
+- be plain text;
+- contain only the API key;
+- not accidentally be named `gemini.key.txt`.
 
-Su Windows abilita la visualizzazione delle estensioni dei file per controllare il nome reale.
+## Gemini returns an error
 
-## Gemini restituisce un errore
+Possible causes include:
 
-Possibili cause:
+- no Wi-Fi connection;
+- invalid or revoked API key;
+- exhausted API quota;
+- API/model changes;
+- a temporary Gemini service problem.
 
-- Kobo non connesso al Wi-Fi;
-- chiave API errata o revocata;
-- quota API esaurita;
-- cambiamenti del modello/API Gemini;
-- problemi temporanei del servizio.
+## The wrong book is detected
 
-La chiave non viene stampata dallo script di verifica.
+Kobo's database can contain several books with `ReadStatus=1`.
 
-## Il dizionario trova il libro sbagliato
+The current script tries candidate books and uses `kobo-context` to choose the book in which the selected text is actually found.
 
-Il database Kobo può contenere più record con `ReadStatus=1`.
+## Words contain an invisible hyphen
 
-La versione attuale prova i candidati e usa `kobo-context` per scegliere il libro nel quale trova realmente la parola selezionata.
+Nickel may pass selected text containing Unicode soft hyphens.
 
-Se il problema si ripete, conserva il file di debug solo per diagnosi privata: può contenere nomi di libri o testo e non deve essere pubblicato automaticamente.
+The script removes soft hyphens for searching while preserving the original selection for display.
 
-## Parole spezzate con trattino invisibile
+## The result page does not open
 
-Nickel può passare parole contenenti soft hyphen Unicode.
-
-Lo script normalizza il testo usato per la ricerca, mantenendo la forma originale per la visualizzazione.
-
-## Il risultato non si apre
-
-Il risultato viene scritto in:
+The generated result is written to:
 
 `.adds/ai-result.html`
 
-La configurazione NickelMenu lo apre tramite il browser interno Kobo.
+The NickelMenu configuration opens that file with Kobo's internal browser.
 
-Controlla che `.adds/nm/ai-dictionary` sia quello presente nel repository.
+## Does this require KOReader?
 
-## Il progetto funziona con KOReader?
+No.
 
-KOReader non è richiesto e non è il target del progetto.
-
-Kobo AI Dictionary è stato progettato appositamente per lavorare con il reader Kobo/Nickel standard.
+KOReader is intentionally not required. The project targets the standard Kobo/Nickel reader.
 
 ## Firmware 5.x
 
-NickelMenu dichiara attualmente che firmware 5.x non è supportato.
+NickelMenu currently states that firmware 5.x is not supported.
 
-Non considerare Kobo AI Dictionary compatibile con firmware 5.x finché NickelMenu e l'intero flusso non saranno verificati.
+Do not assume this project works on firmware 5.x until the full workflow has been tested there.
