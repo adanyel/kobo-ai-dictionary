@@ -1,0 +1,2 @@
+menu_item :selection :AI Dictionary :cmd_output :9000:quiet:/bin/sh /mnt/onboard/.adds/ai-dictionary.sh '{1|S|$}'
+chain_success :nickel_browser :modal:file:///mnt/onboard/.adds/ai-result.html
