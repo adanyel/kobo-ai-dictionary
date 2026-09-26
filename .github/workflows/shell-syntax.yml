@@ -1,0 +1,23 @@
+name: Shell syntax check
+
+on:
+  push:
+    branches:
+      - beta/english
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  shell-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        shell: bash
+        run: |
+          sh -n src/ai-dictionary.sh
+          sh -n src/ai-search.sh
+          sh -n src/check-install.sh
