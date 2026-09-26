@@ -1,0 +1,20 @@
+# Secrets
+gemini.key
+**/gemini.key
+
+# Kobo personal data
+KoboReader.sqlite
+*.epub
+*.kepub.epub
+
+# Runtime/debug output
+ai-result.html
+ai-result.tmp
+ai-dictionary-debug.txt
+ai-kobo-context*.txt
+ai-context-*.txt
+ai-all-book*.txt
+
+# OS/editor files
+.DS_Store
+Thumbs.db
