@@ -998,3 +998,124 @@ if [ -n "$LANGUAGE" ]; then
     printf \
         '<div class="subhead">%s' \
         "$(escape_html "$LANGUAGE")" \
+        >> "$TMP"
+
+    [ -n "$CATEGORY" ] &&
+        printf \
+            ' · %s' \
+            "$(escape_html "$CATEGORY")" \
+            >> "$TMP"
+
+    printf '</div>\n' >> "$TMP"
+fi
+
+# ------------------------------------------------------------
+# Dictionary fields
+# ------------------------------------------------------------
+
+render_field "Pronuncia" "$PRONUNCIATION"
+
+render_field "Significato" "$MEANING"
+
+render_field "Contesto" "$CONTEXT"
+
+render_field "Etimologia" "$ETYMOLOGY"
+
+# ------------------------------------------------------------
+# Book context
+# ------------------------------------------------------------
+
+printf \
+    '<div class="section small"><span class="label">Dal libro (%s):</span></div>\n' \
+    "$(escape_html "$CONTEXT_SOURCE")" \
+    >> "$TMP"
+
+if [ -n "$BOOK_CONTEXT" ]; then
+
+    printf \
+        '<div class="bookctx">%s</div>\n' \
+        "$(format_inline "$BOOK_CONTEXT")" \
+        >> "$TMP"
+
+fi
+
+# ------------------------------------------------------------
+# Remaining fields
+# ------------------------------------------------------------
+
+if [ -n "$ELI5" ]; then
+
+    printf \
+        '<div class="section eli5"><span class="label">ELI5:</span> %s</div>\n' \
+        "$(format_inline "$ELI5")" \
+        >> "$TMP"
+
+fi
+
+render_field "Sinonimi" "$SYNONYMS"
+
+render_translation_lines "$TRANSLATIONS"
+
+render_field "Collocazioni" "$COLLOCATIONS"
+
+if [ -n "$EXAMPLE" ]; then
+
+    printf \
+        '<div class="example"><span class="label">Esempio:</span> %s</div>\n' \
+        "$(format_inline "$EXAMPLE")" \
+        >> "$TMP"
+
+fi
+
+render_field "Traduzione" "$EXAMPLE_TRANSLATION"
+
+render_field "Uso" "$USAGE"
+
+render_field "Falso amico" "$FALSE_FRIEND"
+
+render_field "Grammatica" "$GRAMMAR"
+
+# ------------------------------------------------------------
+# Prompt transparency
+# ------------------------------------------------------------
+
+printf '<hr class="rule prompt-rule">\n' >> "$TMP"
+
+printf \
+    '<div class="prompt-title">Prompt utilizzato:</div>\n' \
+    >> "$TMP"
+
+printf \
+    '<div class="prompt-box">%s</div>\n' \
+    "$(escape_html "$PROMPT")" \
+    >> "$TMP"
+
+cat >> "$TMP" <<'EOF4'
+
+</div>
+
+</body>
+</html>
+
+EOF4
+
+# ------------------------------------------------------------
+# Save result
+# ------------------------------------------------------------
+
+mv "$TMP" "$HTML"
+
+# ------------------------------------------------------------
+# Cleanup
+# ------------------------------------------------------------
+
+rm -f \
+    /mnt/onboard/.adds/ai-kobo-context.txt \
+    /mnt/onboard/.adds/ai-context-raw.html \
+    /mnt/onboard/.adds/ai-context-clean.txt \
+    /mnt/onboard/.adds/ai-context-normalized.txt \
+    /mnt/onboard/.adds/ai-all-book-raw.txt \
+    /mnt/onboard/.adds/ai-all-book.txt \
+    2>/dev/null
+
+exit 0
