@@ -1,20 +1,20 @@
 # ai-tools
 
-Questa cartella contiene gli strumenti binari usati da Kobo AI Dictionary.
+This folder contains binary tools used by Kobo AI Dictionary.
 
-## Incluso nel repository
+## Included in this repository
 
-- `kobo-context`: helper ARMv7 specifico del progetto.
+- `kobo-context`: project-specific ARMv7 context extraction helper.
 
-## Da aggiungere sul Kobo durante l'installazione
+## Add during installation
 
-- `sqlite3`: dipendenza esterna, ricavata dal pacchetto Kobo-UNCaGED.
+- `sqlite3`: external dependency obtained from the Kobo-UNCaGED release package.
 
-Sul dispositivo i due file devono trovarsi in:
+On the Kobo, the expected paths are:
 
 ```text
 /mnt/onboard/.adds/ai-tools/kobo-context
 /mnt/onboard/.adds/ai-tools/sqlite3
 ```
 
-`sqlite3` non viene duplicato in questo repository. Segui [INSTALLAZIONE.md](../INSTALLAZIONE.md).
+`sqlite3` is not duplicated in this repository. See [INSTALLATION.md](../INSTALLATION.md).
