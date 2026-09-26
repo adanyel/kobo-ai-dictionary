@@ -1,89 +1,75 @@
-# Software di terze parti
+# Third-party software
 
-Kobo AI Dictionary non sostituisce né incorpora automaticamente i progetti elencati qui sotto.
+Kobo AI Dictionary depends on third-party projects but does not automatically redistribute them in this repository.
 
-L'utente deve installarli dalle rispettive fonti.
+Install them from their original sources.
 
 ## NickelMenu
 
-Repository:
-
 https://github.com/pgaskin/NickelMenu
 
-Licenza indicata dal repository: MIT.
+Repository license: MIT.
 
-Funzione nel progetto: aggiunge le voci di menu nella UI Kobo/Nickel.
+Purpose: adds custom entries to the Kobo/Nickel interface.
 
 ## NickelDBus
 
-Repository:
-
 https://github.com/shermp/NickelDBus
 
-Licenza indicata dal repository: MIT.
+Repository license: MIT.
 
-Funzione nel progetto: interazione con Nickel; installa anche `/usr/bin/qndb`, usato dalla ricerca manuale.
+Purpose: interaction with Nickel and installation of `/usr/bin/qndb`, used by manual search.
 
 ## KoboStuff
 
-Autore/progetto: NiLuJe.
+Author/project: NiLuJe.
 
-Thread di riferimento:
+Reference thread:
 
 https://www.mobileread.com/forums/showthread.php?t=254214
 
-Archivio conservato anche da:
+Archived package copy:
 
 https://github.com/usetrmnl/trmnl-kobo/tree/main/doc/distrib/kobostuff
 
-Funzione nel progetto: fornisce utility Unix aggiuntive, tra cui quelle usate dalla configurazione validata per `curl` e `jq`, oltre al relativo ambiente core/BusyBox.
+Purpose: additional Unix utilities used by the validated Kobo environment.
 
-KoboStuff è una raccolta di più utility e dipendenze. Per evitare di mescolare licenze e versioni, il suo archivio non viene copiato dentro questo repository.
+KoboStuff bundles several utilities and dependencies, so this repository does not duplicate the archive.
 
 ## Kobo-UNCaGED
 
-Repository:
-
 https://github.com/shermp/Kobo-UNCaGED
 
-Licenza indicata dal repository: AGPL-3.0.
+Repository license: AGPL-3.0.
 
-Kobo AI Dictionary non usa Kobo-UNCaGED come applicazione. Il pacchetto è una fonte pratica e verificata per il binario ARM `sqlite3` compilato per Kobo.
-
-Il Makefile di Kobo-UNCaGED scarica SQLite e costruisce il relativo eseguibile.
+Kobo AI Dictionary does not depend on Kobo-UNCaGED as an application. Its release package is a verified source of a Kobo-compatible `sqlite3` executable.
 
 ## SQLite
 
-Sito:
-
 https://www.sqlite.org/
 
-SQLite dichiara il proprio codice come public domain.
+SQLite states that its code is in the public domain.
 
-Nel progetto serve esclusivamente il client a riga di comando `sqlite3` per leggere `KoboReader.sqlite` in modalità read-only.
+The project uses the `sqlite3` command-line client only to read Kobo's database in read-only mode.
 
 ## BusyBox / unzip
 
-Sito:
-
 https://busybox.net/
 
-BusyBox include una implementazione dell'applet `unzip`.
+BusyBox includes an `unzip` applet.
 
-La configurazione validata dispone di `/usr/bin/unzip`. Vedi [DEPENDENCIES.md](DEPENDENCIES.md) per la nota sulla provenienza e sulla verifica.
+The validated setup contains `/usr/bin/unzip`. See [DEPENDENCIES.md](DEPENDENCIES.md) for the provenance note and verification strategy.
 
 ## Google Gemini API
 
-Documentazione:
-
 https://ai.google.dev/gemini-api/
 
-Google Gemini è un servizio esterno e non fa parte del software distribuito nel repository.
+Gemini is an external service and is not distributed with this repository.
 
-Ogni utente deve usare la propria chiave API e accettare le condizioni applicabili al proprio account.
+Each user must use their own API key and accept the terms applicable to their Google account.
 
-## Nessuna affiliazione
+## No affiliation
 
-Kobo AI Dictionary è un progetto indipendente.
+Kobo AI Dictionary is an independent project.
 
-Non è affiliato, sponsorizzato o approvato da Rakuten Kobo, Google o dagli autori dei progetti di terze parti elencati sopra.
+It is not affiliated with, sponsored by, or endorsed by Rakuten Kobo, Google, or the authors of the third-party projects listed above.
