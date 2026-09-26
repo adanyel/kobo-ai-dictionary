@@ -94,13 +94,25 @@ The database is part of the Kobo device and must not be copied into this reposit
 
 ## kobo-context
 
-`kobo-context` is intentionally **not bundled** in this repository.
+`kobo-context` is the project-specific ARMv7 helper used by the validated setup.
 
-Install the locally retained ARMv7 executable manually at:
+Repository path:
+
+`ai-tools/kobo-context`
+
+Install it on the Kobo at:
 
 `/mnt/onboard/.adds/ai-tools/kobo-context`
 
-See the project installation documentation for the expected command-line interface.
+Validated binary properties:
+
+- ELF 32-bit LSB executable
+- ARM, EABI5
+- statically linked
+- stripped
+- SHA-256: `90081b09970f5e8478896d881590f82779ba1549fc9c7a1b76633c56c9cf4484`
+
+The executable must have execute permission on the Kobo.
 
 ## Open item: unzip provenance
 
