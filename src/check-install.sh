@@ -9,7 +9,7 @@ check_exec() {
     if [ -x "$PATH_TO_CHECK" ]; then
         printf 'OK   %-18s %s\n' "$LABEL" "$PATH_TO_CHECK"
     else
-        printf 'Manca %-17s %s\n' "$LABEL" "$PATH_TO_CHECK"
+        printf 'Missing %-17s %s\n' "$LABEL" "$PATH_TO_CHECK"
         OK=0
     fi
 }
@@ -21,7 +21,7 @@ check_file() {
     if [ -f "$PATH_TO_CHECK" ]; then
         printf 'OK   %-18s %s\n' "$LABEL" "$PATH_TO_CHECK"
     else
-        printf 'Manca %-17s %s\n' "$LABEL" "$PATH_TO_CHECK"
+        printf 'Missing %-17s %s\n' "$LABEL" "$PATH_TO_CHECK"
         OK=0
     fi
 }
@@ -33,12 +33,12 @@ check_nonempty() {
     if [ -s "$PATH_TO_CHECK" ]; then
         printf 'OK   %-18s %s\n' "$LABEL" "$PATH_TO_CHECK"
     else
-        printf 'Manca/vuoto %-11s %s\n' "$LABEL" "$PATH_TO_CHECK"
+        printf 'Missing/empty %-11s %s\n' "$LABEL" "$PATH_TO_CHECK"
         OK=0
     fi
 }
 
-echo "Kobo AI Dictionary - verifica installazione"
+echo "Kobo AI Dictionary - installation check"
 echo "-------------------------------------------"
 
 check_exec "curl" "/usr/bin/curl"
@@ -56,9 +56,9 @@ check_file "KoboReader.sqlite" "/mnt/onboard/.kobo/KoboReader.sqlite"
 echo "-------------------------------------------"
 
 if [ "$OK" -eq 1 ]; then
-    echo "Tutto OK: prerequisiti principali trovati."
+    echo "All OK: main prerequisites found."
     exit 0
 fi
 
-echo "Installazione incompleta: controlla le voci segnate come Manca."
+echo "Installation incomplete: check the items marked Missing."
 exit 1
