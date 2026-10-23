@@ -4,7 +4,7 @@ Dizionario AI per **Kobo con interfaccia standard Nickel**, senza KOReader.
 
 Il progetto permette di selezionare una parola direttamente durante la lettura di un EPUB sul Kobo e ottenere una spiegazione contestuale generata con Gemini. È disponibile anche una ricerca manuale con tastiera.
 
-> **Lingua del progetto:** al momento il progetto è pensato principalmente per utenti italiani. Interfaccia, documentazione e risposte del dizionario sono principalmente in italiano. Il dizionario riconosce italiano, inglese e spagnolo e fornisce traduzioni nelle altre due lingue.
+> **Lingua del progetto:** la documentazione principale resta in italiano, ma il dizionario ora localizza automaticamente il risultato in base alla lingua del libro. Per EPUB in italiano mostra spiegazioni e interfaccia in italiano; per libri in inglese usa l'inglese; per libri in spagnolo usa lo spagnolo. Il testo originale del libro resta nella lingua dell'opera e le traduzioni continuano a coprire le altre lingue supportate.
 
 ## Perché questo progetto
 
@@ -43,7 +43,11 @@ Durante la lettura:
 3. lo script identifica libro e posizione;
 4. estrae il contesto dall'EPUB;
 5. interroga Gemini;
-6. apre una pagina con spiegazione, contesto, etimologia, traduzioni, sinonimi, collocazioni, esempi e note grammaticali.
+6. apre una pagina localizzata nella lingua del libro con spiegazione, contesto, etimologia, traduzioni, sinonimi, collocazioni, esempi e note grammaticali.
+
+La lingua viene rilevata localmente dall'EPUB, senza una chiamata AI aggiuntiva. Quando il metadato della lingua non è disponibile, lo script usa un fallback sul testo estratto. Se il rilevamento resta incerto, mantiene l'italiano come comportamento di sicurezza.
+
+Il contesto completo continua a essere inviato a Gemini per interpretare correttamente il termine, ma nella pagina mostrata sul Kobo compare soltanto un estratto breve attorno alla parola selezionata.
 
 ### Ricerca manuale
 
@@ -109,7 +113,7 @@ L'uso dell'API Gemini è soggetto alle condizioni, alle quote e all'eventuale fa
 - testato su firmware 4.45.23792;
 - pensato per EPUB accessibili come file sul dispositivo;
 - Kobo Store/KEPUB, PDF e altri formati non sono ancora considerati supportati;
-- il progetto è principalmente in italiano;
+- documentazione e guida d'installazione sono principalmente in italiano; l'interfaccia del risultato è localizzata automaticamente per italiano, inglese e spagnolo;
 - richiede Wi-Fi quando viene effettuata la richiesta a Gemini;
 - dipende da componenti Kobo di terze parti.
 
