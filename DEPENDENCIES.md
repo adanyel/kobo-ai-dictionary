@@ -1,23 +1,23 @@
-# Dipendenze
+# Dependencies
 
-Questa pagina documenta le dipendenze reali usate dalla configurazione funzionante di Kobo AI Dictionary.
+This page documents the dependencies used by the validated Kobo AI Dictionary setup.
 
-Il progetto è stato validato su **Kobo Libra Colour, firmware 4.45.23792**.
+Validated platform: **Kobo Libra Colour, firmware 4.45.23792**.
 
-## Riepilogo
+## Summary
 
-| Componente | Percorso/uso | Provenienza | Incluso qui? |
+| Component | Path / purpose | Source | Included here? |
 |---|---|---|---|
-| NickelMenu | integrazione nel menu Kobo | pgaskin/NickelMenu | No |
-| NickelDBus | controllo dialog/browser Nickel | shermp/NickelDBus | No |
-| qndb | `/usr/bin/qndb` | installato da NickelDBus | No |
+| NickelMenu | Kobo menu integration | pgaskin/NickelMenu | No |
+| NickelDBus | Nickel dialog/browser control | shermp/NickelDBus | No |
+| qndb | `/usr/bin/qndb` | installed by NickelDBus | No |
 | curl | `/usr/bin/curl` | KoboStuff | No |
 | jq | `/usr/bin/jq` | KoboStuff | No |
-| unzip | `/usr/bin/unzip` | utility BusyBox/core; presente nel setup con KoboStuff | No |
-| sqlite3 | `.adds/ai-tools/sqlite3` | binario ricavato da Kobo-UNCaGED | No |
-| kobo-context | `.adds/ai-tools/kobo-context` | questo progetto | **Sì** |
-| Gemini API key | `.adds/gemini.key` | Google AI Studio / utente | No |
-| KoboReader.sqlite | `.kobo/KoboReader.sqlite` | firmware Kobo | già sul dispositivo |
+| unzip | `/usr/bin/unzip` | BusyBox/core utility environment; present in validated setup | No |
+| sqlite3 | `.adds/ai-tools/sqlite3` | extracted from Kobo-UNCaGED package | No |
+| kobo-context | `.adds/ai-tools/kobo-context` | this project | **Yes** |
+| Gemini API key | `.adds/gemini.key` | user / Google AI Studio | No |
+| KoboReader.sqlite | `.kobo/KoboReader.sqlite` | Kobo firmware | already on device |
 
 ## NickelMenu
 
@@ -25,139 +25,133 @@ Repository:
 
 https://github.com/pgaskin/NickelMenu
 
-NickelMenu permette di aggiungere le voci:
+NickelMenu exposes the project in Kobo's native UI:
 
-- `AI Dictionary` nella selezione del testo;
-- `AI Dictionary - Cerca parola` nel reader;
-- `AI Dictionary - Verifica installazione`.
+- `AI Dictionary` from selected text;
+- `AI Dictionary - Search` in the reader menu;
+- `AI Dictionary - Check installation`.
 
-NickelMenu dichiara attualmente che firmware Kobo 5.x non è supportato.
-
-## NickelDBus e qndb
+## NickelDBus and qndb
 
 Repository:
 
 https://github.com/shermp/NickelDBus
 
-Il progetto usa NickelDBus per aprire la finestra di input della ricerca manuale e interagire con Nickel.
+The project uses NickelDBus for the manual text-input dialog and browser interaction.
 
-Il Makefile ufficiale di NickelDBus installa esplicitamente:
+The official NickelDBus build installs:
 
 `src/cli/qndb:/usr/bin/qndb`
 
-Quindi `/usr/bin/qndb` non è un file del firmware Kobo standard: arriva da NickelDBus.
+Therefore `/usr/bin/qndb` comes from NickelDBus rather than standard Kobo firmware.
 
 ## KoboStuff
 
-Progetto originale/discussione:
+Reference project/thread:
 
 https://www.mobileread.com/forums/showthread.php?t=254214
 
-Archivio usato nel setup validato:
+Archive used in the validated setup:
 
 `kobo-stuff-1.6.N-r18901.tar.xz`
 
-Mirror archivistico:
+Archival mirror:
 
 https://github.com/usetrmnl/trmnl-kobo/tree/main/doc/distrib/kobostuff
 
-KoboStuff è la fonte usata per:
+The validated setup uses KoboStuff for additional shell utilities, particularly:
 
 - `/usr/bin/curl`;
 - `/usr/bin/jq`;
-- utility shell/core aggiuntive.
+- the extended core/BusyBox utility environment.
 
 ### unzip
 
-Lo script richiede:
+The main dictionary script requires:
 
 `/usr/bin/unzip`
 
-Nel dispositivo validato questo eseguibile è presente e funzionante nello stesso ambiente in cui è installato KoboStuff.
+The validated Kobo has this executable and uses it successfully to inspect EPUB contents.
 
-KoboStuff documenta modifiche e ampliamenti a BusyBox. BusyBox include l'applet `unzip` e la definisce con destinazione `/usr/bin`.
+KoboStuff documents BusyBox/core utility support, and BusyBox includes an `unzip` applet intended for `/usr/bin`. However, no public text manifest was found for the exact `1.6.N-r18901` archive listing every installed path individually.
 
-Non è stato trovato un manifest testuale pubblico dell'esatto archivio KoboStuff `1.6.N-r18901` che consenta di attribuire con certezza assoluta ogni singolo file installato.
+For that reason:
 
-Per questo:
-
-1. KoboStuff resta il percorso d'installazione consigliato per le utility;
-2. la presenza di `/usr/bin/unzip` viene verificata dallo script `check-install.sh`;
-3. non viene copiata nel repository una versione casuale di `unzip`.
+1. KoboStuff remains the recommended utility installation path;
+2. `src/check-install.sh` verifies `/usr/bin/unzip` directly;
+3. this repository does not bundle an arbitrary replacement `unzip` binary.
 
 ## sqlite3
 
-Fonte verificata:
+Verified source:
 
 https://github.com/shermp/Kobo-UNCaGED
 
-Il Makefile ufficiale di Kobo-UNCaGED compila SQLite e inserisce il binario nel pacchetto come:
+The Kobo-UNCaGED build packages SQLite as:
 
 `.adds/kobo-uncaged/bin/sqlite3`
 
-Per Kobo AI Dictionary il binario viene copiato manualmente in:
+For Kobo AI Dictionary, copy that executable to:
 
 `/mnt/onboard/.adds/ai-tools/sqlite3`
 
-Non è necessario usare Kobo-UNCaGED come applicazione.
+Kobo-UNCaGED itself does not need to run as an application.
 
 ## kobo-context
 
-Incluso nel repository:
+Included in this repository:
 
 `ai-tools/kobo-context`
 
-Installazione sul Kobo:
+Install it on the Kobo at:
 
 `/mnt/onboard/.adds/ai-tools/kobo-context`
 
-Binario validato:
+Validated binary properties:
 
-- ELF 32-bit LSB;
-- ARM, EABI5;
-- staticamente linkato;
-- stripped;
-- dimensione: 2,031,768 byte;
-- SHA-256: `90081b09970f5e8478896d881590f82779ba1549fc9c7a1b76633c56c9cf4484`.
+- ELF 32-bit LSB
+- ARM, EABI5
+- statically linked
+- stripped
+- size: 2,031,768 bytes
+- SHA-256: `90081b09970f5e8478896d881590f82779ba1549fc9c7a1b76633c56c9cf4484`
 
 ## Gemini API
 
-Documentazione ufficiale:
+Documentation:
 
 https://ai.google.dev/gemini-api/docs/api-key
 
-La chiave viene letta da:
+The API key is read from:
 
 `/mnt/onboard/.adds/gemini.key`
 
-Il file deve contenere soltanto la chiave.
+Never publish or commit this file.
 
-La chiave **non deve essere caricata su GitHub**.
+## Kobo database
 
-## Database Kobo
-
-Lo script legge:
+The script reads:
 
 `/mnt/onboard/.kobo/KoboReader.sqlite`
 
-in modalità read-only per ottenere libro e posizione di lettura.
+in read-only mode to identify the current book and reading position.
 
-Il database non fa parte del progetto e non deve essere pubblicato.
+Do not copy this database into the repository.
 
-## Utility standard
+## Standard shell utilities
 
-Lo script usa inoltre normali comandi shell come `sed`, `awk`, `grep`, `cut`, `tr`, `head`, `cat`, `cp`, `mv` e `rm`.
+The scripts also use standard commands such as `sed`, `awk`, `grep`, `cut`, `tr`, `head`, `cat`, `cp`, `mv`, and `rm`.
 
-Queste utility fanno parte dell'ambiente Linux/Kobo e/o del layer di utility installato sul dispositivo. La configurazione validata le dispone già.
+These are available in the validated Kobo/Linux utility environment.
 
-## Perché le dipendenze esterne non vengono copiate qui
+## Why third-party binaries are not copied here
 
-Alcuni componenti potrebbero tecnicamente essere ridistribuiti, ma non è la scelta predefinita del progetto perché:
+The project intentionally points users to upstream projects because:
 
-- NickelMenu e NickelDBus hanno release ufficiali proprie;
-- KoboStuff contiene molte utility e componenti con licenze differenti;
-- Kobo-UNCaGED ha la propria licenza e il proprio ciclo di release;
-- duplicare binari di terzi rende più facile distribuire versioni obsolete;
-- è più chiaro separare il codice di Kobo AI Dictionary dalle sue dipendenze.
+- NickelMenu and NickelDBus publish their own releases;
+- KoboStuff contains multiple utilities with different licensing considerations;
+- Kobo-UNCaGED has its own license and release cycle;
+- copied binaries become outdated easily;
+- keeping upstream dependencies separate makes provenance clearer.
 
-Vedi [THIRD_PARTY.md](THIRD_PARTY.md).
+See [THIRD_PARTY.md](THIRD_PARTY.md).
