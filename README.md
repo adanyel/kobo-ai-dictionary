@@ -1,132 +1,153 @@
 # Kobo AI Dictionary
 
-Dizionario AI per **Kobo con interfaccia standard Nickel**, senza KOReader.
+**Context-aware AI dictionary for Kobo's standard Nickel reader — no KOReader required.**
 
-Il progetto permette di selezionare una parola direttamente durante la lettura di un EPUB sul Kobo e ottenere una spiegazione contestuale generata con Gemini. È disponibile anche una ricerca manuale con tastiera.
+Kobo AI Dictionary lets you select a word or expression while reading an EPUB and get an AI-generated explanation based on the actual passage, book title, author, and reading position.
 
-> **Lingua del progetto:** la documentazione principale resta in italiano, ma il dizionario ora localizza automaticamente il risultato in base alla lingua del libro. Per EPUB in italiano mostra spiegazioni e interfaccia in italiano; per libri in inglese usa l'inglese; per libri in spagnolo usa lo spagnolo. Il testo originale del libro resta nella lingua dell'opera e le traduzioni continuano a coprire le altre lingue supportate.
+It is designed for readers who want AI-assisted vocabulary and contextual explanations **without replacing Kobo's native reading interface**.
 
-## Perché questo progetto
+## Why this project
 
-L'obiettivo è avere un dizionario AI senza sostituire il lettore Kobo originale.
+Most advanced Kobo extensions rely on alternative reading software. This project takes a different approach:
 
-- si continua a leggere nell'interfaccia Kobo/Nickel;
-- non serve KOReader;
-- note, evidenziazioni e avanzamento di lettura restano gestiti dal Kobo;
-- il database Kobo viene letto in modalità read-only;
-- il contesto viene ricavato dalla posizione corrente nell'EPUB quando possibile.
+- keep reading in the standard Kobo/Nickel interface;
+- keep Kobo-managed reading progress, highlights, and notes;
+- launch the dictionary directly from selected text;
+- use the surrounding EPUB passage to interpret ambiguous words, names, places, and expressions;
+- use Gemini only for the dictionary response, while book detection and language detection happen locally on the Kobo;
+- no KOReader required.
 
-## Stato e compatibilità
+## Automatic language localization
 
-Configurazione realmente testata:
+The result interface follows the language of the book.
 
-- Kobo Libra Colour;
-- firmware **4.45.23792**;
-- EPUB sideloaded/locali;
-- NickelMenu;
-- NickelDBus;
-- KoboStuff;
-- Gemini API.
+Currently supported:
 
-NickelMenu dichiara attualmente che il firmware Kobo **5.x non è supportato**. Per questo motivo il progetto va considerato, per ora, un progetto per firmware Kobo 4.x.
+- English
+- Italian
+- Spanish
 
-Altri modelli Kobo e altri firmware 4.x potrebbero funzionare, ma non sono ancora stati verificati.
+The script first reads the EPUB language metadata locally. If that is unavailable, it falls back to language detection on the extracted book text.
 
-## Funzioni
+Examples:
 
-### Dizionario dalla parola selezionata
+- English book → English interface and explanations
+- Italian book → Italian interface and explanations
+- Spanish book → Spanish interface and explanations
 
-Durante la lettura:
+The original book excerpt is always preserved in its original language.
 
-1. seleziona una parola o espressione;
-2. scegli **AI Dictionary**;
-3. lo script identifica libro e posizione;
-4. estrae il contesto dall'EPUB;
-5. interroga Gemini;
-6. apre una pagina localizzata nella lingua del libro con spiegazione, contesto, etimologia, traduzioni, sinonimi, collocazioni, esempi e note grammaticali.
+If language detection is inconclusive, **English is the default**.
 
-La lingua viene rilevata localmente dall'EPUB, senza una chiamata AI aggiuntiva. Quando il metadato della lingua non è disponibile, lo script usa un fallback sul testo estratto. Se il rilevamento resta incerto, mantiene l'italiano come comportamento di sicurezza.
+## What the dictionary can show
 
-Il contesto completo continua a essere inviato a Gemini per interpretare correttamente il termine, ma nella pagina mostrata sul Kobo compare soltanto un estratto breve attorno alla parola selezionata.
+Depending on the selected text, the result may include:
 
-### Ricerca manuale
+- pronunciation;
+- meaning;
+- contextual interpretation;
+- etymology;
+- a short excerpt from the book;
+- a simple ELI5 explanation;
+- synonyms;
+- translations;
+- collocations;
+- examples;
+- usage notes;
+- false friends;
+- grammar.
 
-Nel menu del lettore è disponibile:
+The full extracted context can be sent to Gemini for interpretation, but the reader UI shows only a short excerpt around the selected term to keep the page compact.
 
-**AI Dictionary - Cerca parola**
+## How it works
 
-Apre una finestra di input tramite NickelDBus/qndb.
+1. Select a word or expression in an EPUB.
+2. Tap **AI Dictionary** from the Kobo selection menu.
+3. The script reads Kobo's database in read-only mode to identify candidate books and the current reading position.
+4. `kobo-context` checks the EPUB and extracts nearby text.
+5. The EPUB language is detected locally.
+6. Gemini receives the selected text plus relevant book context.
+7. A lightweight HTML result opens in Kobo's internal browser.
 
-## File creati per questo progetto
+A separate **AI Dictionary - Search** entry is also available for manual searches.
 
-Questi sono i componenti specifici di Kobo AI Dictionary presenti nel repository:
+## Tested configuration
 
-- `src/ai-dictionary.sh` → script principale;
-- `src/ai-search.sh` → ricerca manuale;
-- `ai-tools/kobo-context` → helper ARMv7 che estrae il contesto dalla posizione dell'EPUB;
-- `nm/ai-dictionary` → voce NickelMenu per il testo selezionato;
-- `nm/ai-search` → voce NickelMenu per la ricerca manuale.
+Validated on:
 
-È presente anche una verifica opzionale dell'installazione:
+- Kobo Libra Colour
+- Kobo firmware **4.45.23792**
+- native Kobo/Nickel reader
+- sideloaded/local EPUB files
+- NickelMenu
+- NickelDBus
+- KoboStuff
+- Gemini API
 
-- `src/check-install.sh`;
-- `nm/ai-check`.
+Other Kobo models and firmware 4.x versions may work but have not yet been fully validated.
 
-Le altre componenti necessarie sono progetti esterni e **non vengono duplicate nel repository**: in questo modo l'utente può installarle dalle rispettive fonti ufficiali e non rimaniamo bloccati a copie vecchie o con licenze differenti.
+## Installation
 
-## Installazione per utenti non tecnici
+The project is documented for users who do not program.
 
-Segui la guida:
+Start here:
 
-**[INSTALLAZIONE.md](INSTALLAZIONE.md)**
+**[INSTALLATION.md](INSTALLATION.md)**
 
-La guida parte da un Kobo non modificato e indica esattamente cosa scaricare, dove copiarlo e in quale ordine.
+Also see:
 
-Per capire da dove arrivano tutte le dipendenze:
+- [DEPENDENCIES.md](DEPENDENCIES.md) — where every dependency comes from
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — common installation/runtime issues
+- [THIRD_PARTY.md](THIRD_PARTY.md) — upstream projects and licenses
 
-**[DEPENDENCIES.md](DEPENDENCIES.md)**
+## Project files
 
-Per licenze e progetti esterni:
+Project-specific components included in this repository:
 
-**[THIRD_PARTY.md](THIRD_PARTY.md)**
+- `src/ai-dictionary.sh` — main dictionary engine
+- `src/ai-search.sh` — manual search dialog
+- `src/check-install.sh` — installation checker
+- `ai-tools/kobo-context` — ARMv7 EPUB context extraction helper
+- `nm/ai-dictionary` — NickelMenu selected-text entry
+- `nm/ai-search` — NickelMenu manual-search entry
+- `nm/ai-check` — NickelMenu installation-check entry
+
+Third-party Kobo utilities are not duplicated here unless they are part of this project. Users install them from their original upstream projects.
 
 ## Privacy
 
-Per generare la risposta, lo script invia all'API Gemini:
+To generate a contextual response, the script may send Gemini:
 
-- parola o espressione cercata;
-- titolo e autore del libro;
-- nome del file EPUB;
-- contesto estratto dal libro, quando disponibile.
+- the selected word or expression;
+- book title;
+- author;
+- EPUB filename;
+- a nearby excerpt from the book.
 
-La chiave API rimane nel file locale:
+The Gemini API key remains on the Kobo at:
 
 `/mnt/onboard/.adds/gemini.key`
 
-Non caricare mai questo file su GitHub.
+Never commit this file, `KoboReader.sqlite`, personal EPUBs, or debug files containing book text.
 
-L'uso dell'API Gemini è soggetto alle condizioni, alle quote e all'eventuale fatturazione dell'account Google dell'utente.
+## Current limitations
 
-## Limiti attuali
+- primarily validated on Kobo Libra Colour;
+- validated on firmware 4.45.23792;
+- designed for EPUB files accessible on the device filesystem;
+- Kobo Store KEPUB, PDF, and other formats are not currently considered supported;
+- Wi-Fi is required when contacting Gemini;
+- the manual-search dialog uses English by default because it can be opened without an active book context;
+- the project depends on third-party Kobo utilities.
 
-- testato principalmente su Kobo Libra Colour;
-- testato su firmware 4.45.23792;
-- pensato per EPUB accessibili come file sul dispositivo;
-- Kobo Store/KEPUB, PDF e altri formati non sono ancora considerati supportati;
-- documentazione e guida d'installazione sono principalmente in italiano; l'interfaccia del risultato è localizzata automaticamente per italiano, inglese e spagnolo;
-- richiede Wi-Fi quando viene effettuata la richiesta a Gemini;
-- dipende da componenti Kobo di terze parti.
+## Safety copy of the earlier Italian-first build
 
-## Sicurezza dei dati
+The earlier working Italian-first state is preserved in:
 
-Non includere mai nel repository:
+`release/v1.0.0-it`
 
-- `gemini.key`;
-- `KoboReader.sqlite`;
-- EPUB personali;
-- file di debug contenenti testo dei libri;
-- dati personali del dispositivo.
+The current `main` branch is English-first and automatically localizes dictionary results by book language.
 
-## Crediti
+## Independent project
 
-Questo progetto utilizza o si appoggia a software di terze parti, tra cui NickelMenu, NickelDBus, KoboStuff, SQLite/Kobo-UNCaGED e Gemini API. I relativi autori e repository sono indicati in [THIRD_PARTY.md](THIRD_PARTY.md).
+Kobo AI Dictionary is an independent project and is not affiliated with or endorsed by Rakuten Kobo, Google, or the authors of the third-party tools it uses.
