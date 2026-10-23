@@ -19,22 +19,22 @@ TEXT="$1"
 KEY="$(tr -d '\r\n' < "$KEY_FILE" 2>/dev/null)"
 
 if [ -z "$KEY" ]; then
-    echo "ERRORE: API key Gemini non trovata."
+    echo "ERROR: Gemini API key not found."
     exit 1
 fi
 
 if [ -z "$TEXT" ]; then
-    echo "Nessun testo."
+    echo "No text selected."
     exit 1
 fi
 
 if [ ! -x "$SQLITE" ]; then
-    echo "ERRORE: sqlite3 non trovato."
+    echo "ERROR: sqlite3 not found."
     exit 1
 fi
 
 if [ ! -x "$UNZIP" ]; then
-    echo "ERRORE: unzip non trovato."
+    echo "ERROR: unzip not found."
     exit 1
 fi
 
@@ -193,7 +193,43 @@ detect_text_language() {
 
 set_ui_labels() {
     case "$1" in
-        en)
+        it)
+            OUTPUT_LANGUAGE="Italian"
+            L_PRONUNCIATION="Pronuncia"
+            L_MEANING="Significato"
+            L_CONTEXT="Contesto"
+            L_ETYMOLOGY="Etimologia"
+            L_FROM_BOOK="Dal libro"
+            L_SYNONYMS="Sinonimi"
+            L_COLLOCATIONS="Collocazioni"
+            L_EXAMPLE="Esempio"
+            L_TRANSLATION="Traduzione"
+            L_USAGE="Uso"
+            L_FALSE_FRIEND="Falso amico"
+            L_GRAMMAR="Grammatica"
+            L_LANG_IT="Italiano"
+            L_LANG_EN="Inglese"
+            L_LANG_ES="Spagnolo"
+            ;;
+        es)
+            OUTPUT_LANGUAGE="Spanish"
+            L_PRONUNCIATION="Pronunciación"
+            L_MEANING="Significado"
+            L_CONTEXT="Contexto"
+            L_ETYMOLOGY="Etimología"
+            L_FROM_BOOK="Del libro"
+            L_SYNONYMS="Sinónimos"
+            L_COLLOCATIONS="Colocaciones"
+            L_EXAMPLE="Ejemplo"
+            L_TRANSLATION="Traducción"
+            L_USAGE="Uso"
+            L_FALSE_FRIEND="Falso amigo"
+            L_GRAMMAR="Gramática"
+            L_LANG_IT="Italiano"
+            L_LANG_EN="Inglés"
+            L_LANG_ES="Español"
+            ;;
+        *)
             OUTPUT_LANGUAGE="English"
             L_PRONUNCIATION="Pronunciation"
             L_MEANING="Meaning"
@@ -201,57 +237,15 @@ set_ui_labels() {
             L_ETYMOLOGY="Etymology"
             L_FROM_BOOK="From the book"
             L_SYNONYMS="Synonyms"
-            L_TRANSLATIONS="Translations"
             L_COLLOCATIONS="Collocations"
             L_EXAMPLE="Example"
             L_TRANSLATION="Translation"
             L_USAGE="Usage"
             L_FALSE_FRIEND="False friend"
             L_GRAMMAR="Grammar"
-            L_PROMPT="Prompt used"
             L_LANG_IT="Italian"
             L_LANG_EN="English"
             L_LANG_ES="Spanish"
-            ;;
-        es)
-            OUTPUT_LANGUAGE="español"
-            L_PRONUNCIATION="Pronunciación"
-            L_MEANING="Significado"
-            L_CONTEXT="Contexto"
-            L_ETYMOLOGY="Etimología"
-            L_FROM_BOOK="Del libro"
-            L_SYNONYMS="Sinónimos"
-            L_TRANSLATIONS="Traducciones"
-            L_COLLOCATIONS="Colocaciones"
-            L_EXAMPLE="Ejemplo"
-            L_TRANSLATION="Traducción"
-            L_USAGE="Uso"
-            L_FALSE_FRIEND="Falso amigo"
-            L_GRAMMAR="Gramática"
-            L_PROMPT="Prompt utilizado"
-            L_LANG_IT="Italiano"
-            L_LANG_EN="Inglés"
-            L_LANG_ES="Español"
-            ;;
-        *)
-            OUTPUT_LANGUAGE="italiano"
-            L_PRONUNCIATION="Pronuncia"
-            L_MEANING="Significato"
-            L_CONTEXT="Contesto"
-            L_ETYMOLOGY="Etimologia"
-            L_FROM_BOOK="Dal libro"
-            L_SYNONYMS="Sinonimi"
-            L_TRANSLATIONS="Traduzioni"
-            L_COLLOCATIONS="Collocazioni"
-            L_EXAMPLE="Esempio"
-            L_TRANSLATION="Traduzione"
-            L_USAGE="Uso"
-            L_FALSE_FRIEND="Falso amico"
-            L_GRAMMAR="Grammatica"
-            L_PROMPT="Prompt utilizzato"
-            L_LANG_IT="Italiano"
-            L_LANG_EN="Inglese"
-            L_LANG_ES="Spagnolo"
             ;;
     esac
 }
@@ -261,7 +255,7 @@ make_display_context() {
     NEEDLE="$2"
 
     case "$FULL_CONTEXT" in
-        ""|"[NESSUN PASSAGGIO SPECIFICO RECUPERATO DAL LIBRO]")
+        ""|"[NO SPECIFIC PASSAGE RETRIEVED FROM THE BOOK]")
             return 0
             ;;
     esac
@@ -316,7 +310,7 @@ BOOK_TITLE=""
 BOOK_AUTHOR=""
 CFI=""
 BOOK_CONTEXT=""
-CONTEXT_SOURCE="nessuno"
+CONTEXT_SOURCE="none"
 EPUB=""
 CHAPTER=""
 FOUND=""
@@ -426,7 +420,7 @@ if [ -n "$CANDIDATES" ] && [ -x "$CTX" ]; then
             CHAPTER="$C_CHAPTER"
             FOUND="$C_CHAPTER"
             BOOK_CONTEXT="$C_CONTEXT"
-            CONTEXT_SOURCE="posizione corrente del libro (kobo-context)"
+            CONTEXT_SOURCE="current book position (kobo-context)"
 
             printf '%s\n' "$BOOK_CONTEXT" \
                 > /mnt/onboard/.adds/ai-kobo-context.txt 2>/dev/null
@@ -449,8 +443,8 @@ if [ -z "$BOOK" ] && [ -n "$CANDIDATES" ]; then
     CFI="$(printf '%s\n' "$ROW" | cut -d'|' -f4)"
 fi
 
-[ -z "$BOOK_TITLE" ] && BOOK_TITLE="Libro non identificato"
-[ -z "$BOOK_AUTHOR" ] && BOOK_AUTHOR="Autore non identificato"
+[ -z "$BOOK_TITLE" ] && BOOK_TITLE="Book not identified"
+[ -z "$BOOK_AUTHOR" ] && BOOK_AUTHOR="Author not identified"
 
 if [ -z "$EPUB" ]; then
     case "$BOOK" in
@@ -518,7 +512,7 @@ then
             printf 'PRIMARY_KOBO_CONTEXT_LEN=%s\n' "${#BOOK_CONTEXT}" >> "$DEBUG_FILE" 2>/dev/null
 
             if [ -n "$BOOK_CONTEXT" ]; then
-                CONTEXT_SOURCE="posizione corrente del libro (kobo-context)"
+                CONTEXT_SOURCE="current book position (kobo-context)"
                 printf '%s\n' "$BOOK_CONTEXT" \
                     > /mnt/onboard/.adds/ai-kobo-context.txt 2>/dev/null
             fi
@@ -542,7 +536,7 @@ if [ -z "$BOOK_CONTEXT" ] && [ -n "$FOUND" ] && [ -f "$EPUB" ]; then
         fi
         if [ -n "$MATCHES" ]; then
             BOOK_CONTEXT="$(printf '%s\n' "$MATCHES" | while IFS=: read -r LN REST; do [ -z "$LN" ] && continue; START=$((LN-1)); [ "$START" -lt 1 ] && START=1; END=$((LN+1)); sed -n "${START},${END}p" "$NORM"; printf '\n'; done | head -c 7000)"
-            CONTEXT_SOURCE="occorrenza esatta nel capitolo corrente"
+            CONTEXT_SOURCE="exact occurrence in current chapter"
         fi
     fi
 fi
@@ -622,7 +616,7 @@ then
                 head -c 7000
             )"
 
-            CONTEXT_SOURCE="occorrenza esatta trovata nel libro"
+            CONTEXT_SOURCE="exact occurrence found in book"
         fi
     fi
 fi
@@ -633,9 +627,9 @@ fi
 
 if [ -z "$BOOK_CONTEXT" ]; then
 
-    BOOK_CONTEXT="[NESSUN PASSAGGIO SPECIFICO RECUPERATO DAL LIBRO]"
+    BOOK_CONTEXT="[NO SPECIFIC PASSAGE RETRIEVED FROM THE BOOK]"
 
-    CONTEXT_SOURCE="nessun passaggio specifico recuperato"
+    CONTEXT_SOURCE="no specific passage retrieved"
 
 fi
 
@@ -649,8 +643,8 @@ if [ -z "$BOOK_LANG" ]; then
     BOOK_LANG="$(detect_text_language "$BOOK_CONTEXT")"
 fi
 
-# Preserve the historical Italian behavior when language detection is uncertain.
-[ -z "$BOOK_LANG" ] && BOOK_LANG="it"
+# English is the project default when language detection is uncertain.
+[ -z "$BOOK_LANG" ] && BOOK_LANG="en"
 
 set_ui_labels "$BOOK_LANG"
 
@@ -661,13 +655,13 @@ printf 'BOOK_CONTEXT_DISPLAY_LEN=%s\n' "${#BOOK_CONTEXT_DISPLAY}" >> "$DEBUG_FIL
 
 # Localize generic missing metadata only after the book language is known.
 case "$BOOK_LANG" in
-    en)
-        [ "$BOOK_TITLE" = "Libro non identificato" ] && BOOK_TITLE="Book not identified"
-        [ "$BOOK_AUTHOR" = "Autore non identificato" ] && BOOK_AUTHOR="Author not identified"
+    it)
+        [ "$BOOK_TITLE" = "Book not identified" ] && BOOK_TITLE="Libro non identificato"
+        [ "$BOOK_AUTHOR" = "Author not identified" ] && BOOK_AUTHOR="Autore non identificato"
         ;;
     es)
-        [ "$BOOK_TITLE" = "Libro non identificato" ] && BOOK_TITLE="Libro no identificado"
-        [ "$BOOK_AUTHOR" = "Autore non identificato" ] && BOOK_AUTHOR="Autor no identificado"
+        [ "$BOOK_TITLE" = "Book not identified" ] && BOOK_TITLE="Libro no identificado"
+        [ "$BOOK_AUTHOR" = "Author not identified" ] && BOOK_AUTHOR="Autor no identificado"
         ;;
 esac
 
@@ -676,116 +670,109 @@ esac
 # ------------------------------------------------------------
 
 PROMPT=$(cat <<EOF2
-Sei un dizionario AI contestuale per un lettore di libri.
+You are a contextual AI dictionary for a book reader.
 
-TESTO CERCATO:
+SELECTED TEXT:
 $TEXT
 
-TITOLO DELL'OPERA:
+BOOK TITLE:
 $BOOK_TITLE
 
-AUTORE:
+AUTHOR:
 $BOOK_AUTHOR
 
-NOME FILE EPUB:
+EPUB FILE NAME:
 ${EPUB##*/}
 
-LINGUA DEL LIBRO RILEVATA LOCALMENTE:
+BOOK LANGUAGE DETECTED LOCALLY:
 $BOOK_LANG
 
-LINGUA DELL'INTERFACCIA E DELLE SPIEGAZIONI:
+INTERFACE AND EXPLANATION LANGUAGE:
 $OUTPUT_LANGUAGE
 
-FONTE DEL CONTESTO:
+CONTEXT SOURCE:
 $CONTEXT_SOURCE
 
-CONTESTO ESTRATTO DAL LIBRO:
+CONTEXT EXTRACTED FROM THE BOOK:
 $BOOK_CONTEXT
 
-INTERPRETAZIONE DEL CONTESTO:
+CONTEXT INTERPRETATION:
 
-Il titolo dell'opera e l'autore sono informazioni importanti e devono essere
-usati attivamente per interpretare il termine.
+The book title and author are important information and must be actively used
+to interpret the selected text.
 
-Non limitarti automaticamente al significato generale da dizionario.
+Do not automatically limit the answer to the most common dictionary meaning.
 
-Se il termine è usato nell'opera come nome proprio, nome di luogo, nome di un
-locale, bar, ristorante, persona, personaggio, marchio, titolo, oggetto,
-espressione particolare o altra entità specifica, considera seriamente questa
-interpretazione.
+If the selected text is used in the work as a proper noun, place name, venue,
+bar, restaurant, person, character, brand, title, object, special expression,
+or another specific entity, seriously consider that interpretation.
 
-Usa insieme:
-- il termine cercato;
-- il brano recuperato dal libro, quando disponibile;
-- il titolo dell'opera;
-- l'autore;
-- la tua conoscenza dell'opera e del suo contenuto.
+Use together:
+- the selected text;
+- the passage retrieved from the book, when available;
+- the book title;
+- the author;
+- your reliable knowledge of the work and its content.
 
-Se conosci il riferimento specifico nell'opera, utilizzalo per spiegare il
-significato contestuale.
+If you know the specific reference in the work, use it to explain the
+contextual meaning.
 
-Se il brano recuperato contiene l'occorrenza, privilegia ciò che emerge dal
-brano.
+If the retrieved passage contains the occurrence, prioritize what is supported
+by that passage.
 
-Se il brano non contiene l'occorrenza ma titolo, autore e conoscenza dell'opera
-permettono di identificare un riferimento specifico, puoi utilizzarlo.
-Distingui però nel campo "context" ciò che deriva dal brano da ciò che deriva
-dalla conoscenza dell'opera.
+If the passage does not contain the occurrence but the title, author, and
+reliable knowledge of the work allow a specific reference to be identified,
+you may use that knowledge. In the "context" field, distinguish what comes
+from the retrieved passage from what comes from knowledge of the work.
 
-Non inventare citazioni del libro.
+Never invent quotations from the book.
+Never invent a passage that is not present.
 
-Non inventare un passaggio inesistente.
+If the specific reference cannot be established with sufficient confidence,
+still provide the most useful general lexical explanation and state the
+uncertainty.
 
-Se non puoi stabilire con sufficiente sicurezza il riferimento specifico,
-fornisci comunque la spiegazione lessicale generale più utile e indica
-l'incertezza.
+Do not automatically turn a proper noun into a common meaning simply because
+the common meaning is better known.
 
-Non trasformare automaticamente un nome proprio in un significato comune solo
-perché quest'ultimo è più noto.
+LANGUAGE RULES:
 
-REGOLE LINGUISTICHE:
-
-- identifica automaticamente se il testo cercato è inglese, spagnolo o italiano;
-- scrivi TUTTE le spiegazioni nella lingua dell'interfaccia: $OUTPUT_LANGUAGE;
-- anche i valori "language" e "category" devono essere nella lingua
-  dell'interfaccia;
-- conserva eventuali citazioni o estratti del libro nella lingua originale;
-- traduci il termine o la frase nelle altre due lingue supportate;
-- nel campo "translations" usa SEMPRE prefissi tecnici stabili, uno per riga:
+- automatically identify whether the selected text is English, Italian, or Spanish;
+- write ALL explanations in the interface language: $OUTPUT_LANGUAGE;
+- the values of "language" and "category" must also be in $OUTPUT_LANGUAGE;
+- preserve quotations and book excerpts in their original language;
+- translate the selected word or phrase into the other two supported languages;
+- in the "translations" field, use stable technical prefixes, one per line:
   IT:, EN:, ES:;
-- non includere nel campo "translations" la lingua originale del termine;
-- per un nome proprio non forzare una traduzione letterale.
+- do not include the source language in "translations";
+- do not force literal translations for proper nouns.
 
-ETIMOLOGIA:
+ETYMOLOGY:
 
-Spiega davvero l'etimologia: forma o radice antica, significato originario,
-eventuali passaggi intermedi e sviluppo del significato.
+Explain the etymology properly: ancient or root form, original meaning,
+relevant intermediate stages, and development of the modern meaning.
 
-Non limitarti a dire "deriva dal latino/greco".
-
-Non inventare collegamenti.
-
-Se l'etimologia è incerta o controversa, dichiaralo.
+Do not stop at statements such as "from Latin/Greek".
+Do not invent connections.
+If the etymology is uncertain or disputed, say so.
 
 ELI5:
 
-Spiega il concetto in modo molto semplice, sempre in $OUTPUT_LANGUAGE.
+Explain the concept in very simple language, always in $OUTPUT_LANGUAGE.
 
-STILE:
+STYLE:
 
-- conciso ma informativo;
-- tono da buon dizionario;
-- niente introduzioni inutili;
-- niente conclusioni inutili;
-- niente tabelle;
-- niente elenchi numerati;
-- usa corsivo o grassetto quando utile.
+- concise but informative;
+- good dictionary tone;
+- no unnecessary introductions or conclusions;
+- no tables;
+- no numbered lists;
+- use italics or bold only when useful;
+- do not repeat field names inside field values.
 
-Devi restituire SOLO il JSON richiesto dallo schema.
-
-Tutte le proprietà devono essere presenti.
-
-Quando una voce non è pertinente, restituisci una stringa vuota.
+Return ONLY the JSON required by the schema.
+All properties must be present.
+When a field is not relevant, return an empty string.
 EOF2
 )
 
@@ -880,11 +867,11 @@ if [ -z "$JSON_TEXT" ]; then
     ERROR="$(
         printf '%s' "$RESPONSE" |
         "$JQ" -r \
-            '.error.message // "Nessuna risposta da Gemini."' \
+            '.error.message // "No response from Gemini."' \
             2>/dev/null
     )"
 
-    printf 'ERRORE Gemini: %s\n' "$ERROR"
+    printf 'Gemini ERROR: %s\n' "$ERROR"
 
     exit 1
 fi
@@ -893,7 +880,7 @@ if ! printf '%s' "$JSON_TEXT" |
     "$JQ" empty >/dev/null 2>&1
 then
 
-    echo "ERRORE: risposta JSON non valida."
+    echo "ERROR: invalid JSON response."
 
     exit 1
 fi
@@ -941,11 +928,6 @@ render_translation_lines() {
     VALUE="$1"
 
     [ -z "$VALUE" ] && return 0
-
-    printf \
-        '<div class="section translations-title"><span class="label">%s:</span></div>\n' \
-        "$L_TRANSLATIONS" \
-        >> "$TMP"
 
     printf '%s\n' "$VALUE" |
     while IFS= read -r LINE || [ -n "$LINE" ]; do
@@ -1005,7 +987,7 @@ render_translation_lines() {
 }
 
 # ------------------------------------------------------------
-# Build HTML
+# Build reader HTML
 # ------------------------------------------------------------
 
 cat > "$TMP" <<'EOF3'
@@ -1072,13 +1054,8 @@ body{
     font-weight:700
 }
 
-.translations-title{
-    margin-bottom:5px
-}
-
 .translation{
-    margin-left:12px;
-    margin-bottom:5px
+    margin:0 0 7px 0
 }
 
 .example{
@@ -1095,45 +1072,21 @@ body{
 }
 
 .bookctx{
-    margin:4px 0 14px 0;
-    padding:5px 10px 6px 11px;
+    margin:3px 0 13px 0;
+    padding:7px 10px 7px 11px;
     border-left:2px solid #777;
     font-size:17px;
     line-height:1.35;
-    font-style:italic
+    color:#333
 }
 
-.bookctx-title{
-    margin:2px 0 4px 0;
-    font-size:15px;
-    color:#555
+.bookctx-text{
+    font-style:italic
 }
 
 .small{
     font-size:17px;
     color:#444
-}
-
-.prompt-rule{
-    margin-top:18px;
-    margin-bottom:8px
-}
-
-.prompt-title{
-    font-size:14px;
-    font-weight:700;
-    color:#555;
-    margin-bottom:5px
-}
-
-.prompt-box{
-    font-family:monospace;
-    font-size:11px;
-    line-height:1.25;
-    color:#555;
-    white-space:pre-wrap;
-    overflow-wrap:anywhere;
-    margin-bottom:12px
 }
 
 em{
@@ -1154,6 +1107,16 @@ strong{
 
 EOF3
 
+LANGUAGE="$(
+    printf '%s' "$JSON_TEXT" |
+    "$JQ" -r '.language // ""'
+)"
+
+CATEGORY="$(
+    printf '%s' "$JSON_TEXT" |
+    "$JQ" -r '.category // ""'
+)"
+
 HEADWORD="$(
     printf '%s' "$TEXT" |
     tr '\n' ' ' |
@@ -1164,6 +1127,18 @@ printf \
     '<div class="headword">%s</div>\n' \
     "$(escape_html "$HEADWORD")" \
     >> "$TMP"
+
+if [ -n "$LANGUAGE" ]; then
+    printf \
+        '<div class="subhead">%s' \
+        "$(escape_html "$LANGUAGE")" \
+        >> "$TMP"
+
+    [ -n "$CATEGORY" ] &&
+        printf ' · %s' "$(escape_html "$CATEGORY")" >> "$TMP"
+
+    printf '</div>\n' >> "$TMP"
+fi
 
 printf \
     '<div class="small"><strong>%s</strong> · %s</div>\n' \
@@ -1176,16 +1151,6 @@ printf '<hr class="rule">\n' >> "$TMP"
 # ------------------------------------------------------------
 # Extract Gemini fields
 # ------------------------------------------------------------
-
-LANGUAGE="$(
-    printf '%s' "$JSON_TEXT" |
-    "$JQ" -r '.language // ""'
-)"
-
-CATEGORY="$(
-    printf '%s' "$JSON_TEXT" |
-    "$JQ" -r '.category // ""'
-)"
 
 PRONUNCIATION="$(
     printf '%s' "$JSON_TEXT" |
@@ -1253,26 +1218,6 @@ GRAMMAR="$(
 )"
 
 # ------------------------------------------------------------
-# Header
-# ------------------------------------------------------------
-
-if [ -n "$LANGUAGE" ]; then
-
-    printf \
-        '<div class="subhead">%s' \
-        "$(escape_html "$LANGUAGE")" \
-        >> "$TMP"
-
-    [ -n "$CATEGORY" ] &&
-        printf \
-            ' · %s' \
-            "$(escape_html "$CATEGORY")" \
-            >> "$TMP"
-
-    printf '</div>\n' >> "$TMP"
-fi
-
-# ------------------------------------------------------------
 # Dictionary fields
 # ------------------------------------------------------------
 
@@ -1292,12 +1237,8 @@ render_field "$L_ETYMOLOGY" "$ETYMOLOGY"
 if [ -n "$BOOK_CONTEXT_DISPLAY" ]; then
 
     printf \
-        '<div class="bookctx-title"><span class="label">%s:</span></div>\n' \
+        '<div class="bookctx"><span class="label">%s:</span> <span class="bookctx-text">%s</span></div>\n' \
         "$L_FROM_BOOK" \
-        >> "$TMP"
-
-    printf \
-        '<div class="bookctx">%s</div>\n' \
         "$(format_inline "$BOOK_CONTEXT_DISPLAY")" \
         >> "$TMP"
 
@@ -1339,22 +1280,6 @@ render_field "$L_USAGE" "$USAGE"
 render_field "$L_FALSE_FRIEND" "$FALSE_FRIEND"
 
 render_field "$L_GRAMMAR" "$GRAMMAR"
-
-# ------------------------------------------------------------
-# Prompt transparency
-# ------------------------------------------------------------
-
-printf '<hr class="rule prompt-rule">\n' >> "$TMP"
-
-printf \
-    '<div class="prompt-title">%s:</div>\n' \
-    "$L_PROMPT" \
-    >> "$TMP"
-
-printf \
-    '<div class="prompt-box">%s</div>\n' \
-    "$(escape_html "$PROMPT")" \
-    >> "$TMP"
 
 cat >> "$TMP" <<'EOF4'
 
