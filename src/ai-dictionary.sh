@@ -316,15 +316,15 @@ CHAPTER=""
 FOUND=""
 CTX="/mnt/onboard/.adds/ai-tools/kobo-context"
 
-# Kobo puo' avere piu' record con ReadStatus=1.
-# Non assumiamo che il primo sia il libro visibile:
-# proviamo i candidati e scegliamo quello in cui kobo-context
-# trova realmente la parola selezionata.
+# Kobo may contain multiple records with ReadStatus=1.
+# Do not assume the first record is the currently visible book:
+# test candidates and choose the one in which kobo-context
+# actually finds the selected text.
 
-# Nickel/Kobo puo' passare parole con soft-hyphen (U+00AD):
+# Nickel/Kobo may pass selected text containing soft hyphens (U+00AD):
 # "go­ril­la" invece di "gorilla".
-# TEXT resta invariato per la visualizzazione; TEXT_CLEAN viene usato
-# per cercare il termine nel libro.
+# Keep TEXT unchanged for display; use TEXT_CLEAN
+# to search for the term in the book.
 TEXT_CLEAN="$(printf '%s' "$TEXT" | tr -d '\302\255' | sed 's/[[:space:]][[:space:]]*/ /g')"
 
 DEBUG_FILE="/mnt/onboard/.adds/ai-dictionary-debug.txt"
@@ -384,9 +384,9 @@ if [ -n "$CANDIDATES" ] && [ -x "$CTX" ]; then
                 ;;
         esac
 
-        # Non verifichiamo piu' EPUB/chapter con unzip prima della chiamata:
-        # kobo-context deve ricevere esattamente gli stessi argomenti gia'
-        # verificati manualmente come funzionanti.
+        # Do not pre-validate EPUB/chapter with unzip before this call:
+        # kobo-context must receive the same argument shape already
+        # validated manually on the working device.
         C_TMP="/mnt/onboard/.adds/ai-kobo-context-candidate.txt"
         "$CTX" \
             -epub "$C_EPUB" \
@@ -433,8 +433,8 @@ $CANDIDATES
 EOF_CANDIDATES
 fi
 
-# Se nessun candidato ha prodotto contesto, manteniamo il record piu'
-# recente solo per poter usare i fallback successivi.
+# If no candidate produced context, keep the most recent record
+# so later fallback stages can still run.
 if [ -z "$BOOK" ] && [ -n "$CANDIDATES" ]; then
     ROW="$(printf '%s\n' "$CANDIDATES" | head -n 1)"
     BOOK="$(printf '%s\n' "$ROW" | cut -d'|' -f1)"
@@ -486,7 +486,7 @@ if [ -z "$FOUND" ] && [ -f "$EPUB" ] && [ -n "$CHAPTER" ]; then
     fi
 fi
 
-# Prima fonte: kobo-context con la parola normalizzata.
+# Primary source: kobo-context with normalized selected text.
 if [ -z "$BOOK_CONTEXT" ] &&
    [ -x "$CTX" ] &&
    [ -f "$EPUB" ] &&
@@ -520,7 +520,7 @@ then
     esac
 fi
 
-# Fallback: lettura diretta del capitolo, mantenuto dal comportamento precedente.
+# Fallback: read the current chapter directly, preserving the previous behavior.
 if [ -z "$BOOK_CONTEXT" ] && [ -n "$FOUND" ] && [ -f "$EPUB" ]; then
     RAW="/mnt/onboard/.adds/ai-context-raw.html"
     CLEAN="/mnt/onboard/.adds/ai-context-clean.txt"
