@@ -101,6 +101,213 @@ clean_epub_html() {
 }
 
 # ------------------------------------------------------------
+# Book-language detection and localized UI
+# ------------------------------------------------------------
+
+detect_epub_language() {
+    EPUB_FILE="$1"
+
+    [ -f "$EPUB_FILE" ] || return 1
+
+    CONTAINER_XML="$(
+        "$UNZIP" -p "$EPUB_FILE" "META-INF/container.xml" 2>/dev/null |
+        tr '\n' ' '
+    )"
+
+    OPF_PATH="$(
+        printf '%s' "$CONTAINER_XML" |
+        sed -n 's/.*full-path="\([^"]*\)".*/\1/p' |
+        head -n 1
+    )"
+
+    [ -n "$OPF_PATH" ] || return 1
+
+    OPF_XML="$(
+        "$UNZIP" -p "$EPUB_FILE" "$OPF_PATH" 2>/dev/null |
+        tr '\n' ' '
+    )"
+
+    EPUB_LANG="$(
+        printf '%s' "$OPF_XML" |
+        sed -n             -e 's#.*<dc:language[^>]*>\([^<]*\)</dc:language>.*#\1#p'             -e 's#.*<language[^>]*>\([^<]*\)</language>.*#\1#p' |
+        head -n 1 |
+        sed 's/^ *//;s/ *$//' |
+        tr '[:upper:]' '[:lower:]'
+    )"
+
+    case "$EPUB_LANG" in
+        it|it-*|ita|italian|italiano)
+            printf 'it'
+            ;;
+        en|en-*|eng|english)
+            printf 'en'
+            ;;
+        es|es-*|spa|spanish|español|espanol)
+            printf 'es'
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+detect_text_language() {
+    printf '%s' "$1" |
+    awk '
+    {
+        text=tolower($0)
+        gsub(/[^a-z]+/, " ", text)
+        n=split(text, w, / +/)
+
+        for (i=1; i<=n; i++) {
+            t=w[i]
+
+            if (t=="the" || t=="and" || t=="that" || t=="this" ||
+                t=="with" || t=="was" || t=="were" || t=="have" ||
+                t=="had" || t=="from" || t=="but" || t=="his" ||
+                t=="her" || t=="they" || t=="you" || t=="not")
+                en++
+
+            if (t=="che" || t=="della" || t=="delle" || t=="degli" ||
+                t=="questo" || t=="questa" || t=="anche" || t=="sono" ||
+                t=="non" || t=="nel" || t=="nella" || t=="gli" ||
+                t=="dei" || t=="dai" || t=="dove")
+                it++
+
+            if (t=="que" || t=="los" || t=="las" || t=="del" ||
+                t=="pero" || t=="como" || t=="por" || t=="para" ||
+                t=="estaba" || t=="esto" || t=="esta" || t=="sus" ||
+                t=="muy" || t=="sin" || t=="desde")
+                es++
+        }
+    }
+    END {
+        if (en > it && en > es && en > 0)
+            print "en"
+        else if (es > it && es > en && es > 0)
+            print "es"
+        else if (it > 0)
+            print "it"
+    }'
+}
+
+set_ui_labels() {
+    case "$1" in
+        en)
+            OUTPUT_LANGUAGE="English"
+            L_PRONUNCIATION="Pronunciation"
+            L_MEANING="Meaning"
+            L_CONTEXT="Context"
+            L_ETYMOLOGY="Etymology"
+            L_FROM_BOOK="From the book"
+            L_SYNONYMS="Synonyms"
+            L_TRANSLATIONS="Translations"
+            L_COLLOCATIONS="Collocations"
+            L_EXAMPLE="Example"
+            L_TRANSLATION="Translation"
+            L_USAGE="Usage"
+            L_FALSE_FRIEND="False friend"
+            L_GRAMMAR="Grammar"
+            L_PROMPT="Prompt used"
+            L_LANG_IT="Italian"
+            L_LANG_EN="English"
+            L_LANG_ES="Spanish"
+            ;;
+        es)
+            OUTPUT_LANGUAGE="español"
+            L_PRONUNCIATION="Pronunciación"
+            L_MEANING="Significado"
+            L_CONTEXT="Contexto"
+            L_ETYMOLOGY="Etimología"
+            L_FROM_BOOK="Del libro"
+            L_SYNONYMS="Sinónimos"
+            L_TRANSLATIONS="Traducciones"
+            L_COLLOCATIONS="Colocaciones"
+            L_EXAMPLE="Ejemplo"
+            L_TRANSLATION="Traducción"
+            L_USAGE="Uso"
+            L_FALSE_FRIEND="Falso amigo"
+            L_GRAMMAR="Gramática"
+            L_PROMPT="Prompt utilizado"
+            L_LANG_IT="Italiano"
+            L_LANG_EN="Inglés"
+            L_LANG_ES="Español"
+            ;;
+        *)
+            OUTPUT_LANGUAGE="italiano"
+            L_PRONUNCIATION="Pronuncia"
+            L_MEANING="Significato"
+            L_CONTEXT="Contesto"
+            L_ETYMOLOGY="Etimologia"
+            L_FROM_BOOK="Dal libro"
+            L_SYNONYMS="Sinonimi"
+            L_TRANSLATIONS="Traduzioni"
+            L_COLLOCATIONS="Collocazioni"
+            L_EXAMPLE="Esempio"
+            L_TRANSLATION="Traduzione"
+            L_USAGE="Uso"
+            L_FALSE_FRIEND="Falso amico"
+            L_GRAMMAR="Grammatica"
+            L_PROMPT="Prompt utilizzato"
+            L_LANG_IT="Italiano"
+            L_LANG_EN="Inglese"
+            L_LANG_ES="Spagnolo"
+            ;;
+    esac
+}
+
+make_display_context() {
+    FULL_CONTEXT="$1"
+    NEEDLE="$2"
+
+    case "$FULL_CONTEXT" in
+        ""|"[NESSUN PASSAGGIO SPECIFICO RECUPERATO DAL LIBRO]")
+            return 0
+            ;;
+    esac
+
+    printf '%s' "$FULL_CONTEXT" |
+    tr '\r\n\t' '   ' |
+    sed 's/[[:space:]][[:space:]]*/ /g;s/^ *//;s/ *$//' |
+    awk -v needle="$NEEDLE" '
+    {
+        text=$0
+        low=tolower(text)
+        n=tolower(needle)
+        pos=index(low,n)
+        maxlen=560
+
+        if (length(text) <= maxlen) {
+            print text
+            exit
+        }
+
+        if (pos > 0) {
+            start=pos-180
+            if (start < 1)
+                start=1
+        } else {
+            start=1
+        }
+
+        out=substr(text,start,maxlen)
+
+        if (start > 1) {
+            sub(/^[^ ]* /,"",out)
+            out="… " out
+        }
+
+        if (start+maxlen <= length(text)) {
+            sub(/ [^ ]*$/,"",out)
+            out=out " …"
+        }
+
+        print out
+        exit
+    }'
+}
+
+# ------------------------------------------------------------
 # Current Kobo book + reading position
 # ------------------------------------------------------------
 
@@ -433,12 +640,43 @@ if [ -z "$BOOK_CONTEXT" ]; then
 fi
 
 # ------------------------------------------------------------
+# Detect book language locally, without an extra API request
+# ------------------------------------------------------------
+
+BOOK_LANG="$(detect_epub_language "$EPUB" 2>/dev/null)"
+
+if [ -z "$BOOK_LANG" ]; then
+    BOOK_LANG="$(detect_text_language "$BOOK_CONTEXT")"
+fi
+
+# Preserve the historical Italian behavior when language detection is uncertain.
+[ -z "$BOOK_LANG" ] && BOOK_LANG="it"
+
+set_ui_labels "$BOOK_LANG"
+
+BOOK_CONTEXT_DISPLAY="$(make_display_context "$BOOK_CONTEXT" "$TEXT_CLEAN")"
+
+printf 'BOOK_LANG=[%s]\n' "$BOOK_LANG" >> "$DEBUG_FILE" 2>/dev/null
+printf 'BOOK_CONTEXT_DISPLAY_LEN=%s\n' "${#BOOK_CONTEXT_DISPLAY}" >> "$DEBUG_FILE" 2>/dev/null
+
+# Localize generic missing metadata only after the book language is known.
+case "$BOOK_LANG" in
+    en)
+        [ "$BOOK_TITLE" = "Libro non identificato" ] && BOOK_TITLE="Book not identified"
+        [ "$BOOK_AUTHOR" = "Autore non identificato" ] && BOOK_AUTHOR="Author not identified"
+        ;;
+    es)
+        [ "$BOOK_TITLE" = "Libro non identificato" ] && BOOK_TITLE="Libro no identificado"
+        [ "$BOOK_AUTHOR" = "Autore non identificato" ] && BOOK_AUTHOR="Autor no identificado"
+        ;;
+esac
+
+# ------------------------------------------------------------
 # Gemini prompt
 # ------------------------------------------------------------
 
 PROMPT=$(cat <<EOF2
-Sei un dizionario AI per un lettore italiano che legge e studia
-inglese, spagnolo e italiano.
+Sei un dizionario AI contestuale per un lettore di libri.
 
 TESTO CERCATO:
 $TEXT
@@ -451,6 +689,12 @@ $BOOK_AUTHOR
 
 NOME FILE EPUB:
 ${EPUB##*/}
+
+LINGUA DEL LIBRO RILEVATA LOCALMENTE:
+$BOOK_LANG
+
+LINGUA DELL'INTERFACCIA E DELLE SPIEGAZIONI:
+$OUTPUT_LANGUAGE
 
 FONTE DEL CONTESTO:
 $CONTEXT_SOURCE
@@ -485,7 +729,7 @@ brano.
 
 Se il brano non contiene l'occorrenza ma titolo, autore e conoscenza dell'opera
 permettono di identificare un riferimento specifico, puoi utilizzarlo.
-Distingui però nel campo "contesto" ciò che deriva dal brano da ciò che deriva
+Distingui però nel campo "context" ciò che deriva dal brano da ciò che deriva
 dalla conoscenza dell'opera.
 
 Non inventare citazioni del libro.
@@ -501,10 +745,15 @@ perché quest'ultimo è più noto.
 
 REGOLE LINGUISTICHE:
 
-- identifica automaticamente inglese, spagnolo o italiano;
-- tutte le spiegazioni sono in italiano;
-- traduci sempre nelle altre due lingue;
-- per una frase traduci nelle altre due lingue;
+- identifica automaticamente se il testo cercato è inglese, spagnolo o italiano;
+- scrivi TUTTE le spiegazioni nella lingua dell'interfaccia: $OUTPUT_LANGUAGE;
+- anche i valori "language" e "category" devono essere nella lingua
+  dell'interfaccia;
+- conserva eventuali citazioni o estratti del libro nella lingua originale;
+- traduci il termine o la frase nelle altre due lingue supportate;
+- nel campo "translations" usa SEMPRE prefissi tecnici stabili, uno per riga:
+  IT:, EN:, ES:;
+- non includere nel campo "translations" la lingua originale del termine;
 - per un nome proprio non forzare una traduzione letterale.
 
 ETIMOLOGIA:
@@ -520,7 +769,7 @@ Se l'etimologia è incerta o controversa, dichiaralo.
 
 ELI5:
 
-Spiega il concetto in modo molto semplice.
+Spiega il concetto in modo molto semplice, sempre in $OUTPUT_LANGUAGE.
 
 STILE:
 
@@ -694,7 +943,8 @@ render_translation_lines() {
     [ -z "$VALUE" ] && return 0
 
     printf \
-        '<div class="section"><span class="label">Traduzioni:</span></div>\n' \
+        '<div class="section translations-title"><span class="label">%s:</span></div>\n' \
+        "$L_TRANSLATIONS" \
         >> "$TMP"
 
     printf '%s\n' "$VALUE" |
@@ -709,32 +959,35 @@ render_translation_lines() {
 
         case "$LINE" in
 
-            Italiano:*)
+            IT:*|Italiano:*|Italian:*)
 
-                V="${LINE#Italiano:}"
+                V="${LINE#*:}"
 
                 printf \
-                    '<div class="translation"><span class="label">Italiano:</span> %s</div>\n' \
+                    '<div class="translation"><span class="label">%s:</span> %s</div>\n' \
+                    "$L_LANG_IT" \
                     "$(format_inline "$(printf '%s' "$V" | sed 's/^ *//')")" \
                     >> "$TMP"
                 ;;
 
-            Inglese:*)
+            EN:*|Inglese:*|English:*|Inglés:*)
 
-                V="${LINE#Inglese:}"
+                V="${LINE#*:}"
 
                 printf \
-                    '<div class="translation"><span class="label">Inglese:</span> %s</div>\n' \
+                    '<div class="translation"><span class="label">%s:</span> %s</div>\n' \
+                    "$L_LANG_EN" \
                     "$(format_inline "$(printf '%s' "$V" | sed 's/^ *//')")" \
                     >> "$TMP"
                 ;;
 
-            Spagnolo:*)
+            ES:*|Spagnolo:*|Spanish:*|Español:*)
 
-                V="${LINE#Spagnolo:}"
+                V="${LINE#*:}"
 
                 printf \
-                    '<div class="translation"><span class="label">Spagnolo:</span> %s</div>\n' \
+                    '<div class="translation"><span class="label">%s:</span> %s</div>\n' \
+                    "$L_LANG_ES" \
                     "$(format_inline "$(printf '%s' "$V" | sed 's/^ *//')")" \
                     >> "$TMP"
                 ;;
@@ -778,9 +1031,9 @@ html,body{
 
 body{
     font-family:Georgia,"Times New Roman",serif;
-    font-size:21px;
-    line-height:1.25;
-    padding:16px 22px 24px 22px;
+    font-size:20px;
+    line-height:1.34;
+    padding:18px 20px 26px 20px;
     box-sizing:border-box
 }
 
@@ -790,10 +1043,10 @@ body{
 }
 
 .headword{
-    font-size:28px;
-    line-height:1.10;
+    font-size:30px;
+    line-height:1.08;
     font-weight:700;
-    margin:0 0 4px 0;
+    margin:0 0 5px 0;
     overflow-wrap:anywhere
 }
 
@@ -812,15 +1065,19 @@ body{
 }
 
 .section{
-    margin:0 0 9px 0
+    margin:0 0 10px 0
 }
 
 .label{
     font-weight:700
 }
 
+.translations-title{
+    margin-bottom:5px
+}
+
 .translation{
-    margin-left:10px;
+    margin-left:12px;
     margin-bottom:5px
 }
 
@@ -838,12 +1095,18 @@ body{
 }
 
 .bookctx{
-    margin:6px 0 12px 8px;
-    padding:8px 10px;
-    border-left:3px solid #555;
-    font-size:19px;
-    line-height:1.25;
+    margin:4px 0 14px 0;
+    padding:5px 10px 6px 11px;
+    border-left:2px solid #777;
+    font-size:17px;
+    line-height:1.35;
     font-style:italic
+}
+
+.bookctx-title{
+    margin:2px 0 4px 0;
+    font-size:15px;
+    color:#555
 }
 
 .small{
@@ -1013,28 +1276,29 @@ fi
 # Dictionary fields
 # ------------------------------------------------------------
 
-render_field "Pronuncia" "$PRONUNCIATION"
+render_field "$L_PRONUNCIATION" "$PRONUNCIATION"
 
-render_field "Significato" "$MEANING"
+render_field "$L_MEANING" "$MEANING"
 
-render_field "Contesto" "$CONTEXT"
+render_field "$L_CONTEXT" "$CONTEXT"
 
-render_field "Etimologia" "$ETYMOLOGY"
+render_field "$L_ETYMOLOGY" "$ETYMOLOGY"
 
 # ------------------------------------------------------------
-# Book context
+# Short source excerpt for the reader.
+# The full BOOK_CONTEXT is still sent to Gemini.
 # ------------------------------------------------------------
 
-printf \
-    '<div class="section small"><span class="label">Dal libro (%s):</span></div>\n' \
-    "$(escape_html "$CONTEXT_SOURCE")" \
-    >> "$TMP"
+if [ -n "$BOOK_CONTEXT_DISPLAY" ]; then
 
-if [ -n "$BOOK_CONTEXT" ]; then
+    printf \
+        '<div class="bookctx-title"><span class="label">%s:</span></div>\n' \
+        "$L_FROM_BOOK" \
+        >> "$TMP"
 
     printf \
         '<div class="bookctx">%s</div>\n' \
-        "$(format_inline "$BOOK_CONTEXT")" \
+        "$(format_inline "$BOOK_CONTEXT_DISPLAY")" \
         >> "$TMP"
 
 fi
@@ -1052,28 +1316,29 @@ if [ -n "$ELI5" ]; then
 
 fi
 
-render_field "Sinonimi" "$SYNONYMS"
+render_field "$L_SYNONYMS" "$SYNONYMS"
 
 render_translation_lines "$TRANSLATIONS"
 
-render_field "Collocazioni" "$COLLOCATIONS"
+render_field "$L_COLLOCATIONS" "$COLLOCATIONS"
 
 if [ -n "$EXAMPLE" ]; then
 
     printf \
-        '<div class="example"><span class="label">Esempio:</span> %s</div>\n' \
+        '<div class="example"><span class="label">%s:</span> %s</div>\n' \
+        "$L_EXAMPLE" \
         "$(format_inline "$EXAMPLE")" \
         >> "$TMP"
 
 fi
 
-render_field "Traduzione" "$EXAMPLE_TRANSLATION"
+render_field "$L_TRANSLATION" "$EXAMPLE_TRANSLATION"
 
-render_field "Uso" "$USAGE"
+render_field "$L_USAGE" "$USAGE"
 
-render_field "Falso amico" "$FALSE_FRIEND"
+render_field "$L_FALSE_FRIEND" "$FALSE_FRIEND"
 
-render_field "Grammatica" "$GRAMMAR"
+render_field "$L_GRAMMAR" "$GRAMMAR"
 
 # ------------------------------------------------------------
 # Prompt transparency
@@ -1082,7 +1347,8 @@ render_field "Grammatica" "$GRAMMAR"
 printf '<hr class="rule prompt-rule">\n' >> "$TMP"
 
 printf \
-    '<div class="prompt-title">Prompt utilizzato:</div>\n' \
+    '<div class="prompt-title">%s:</div>\n' \
+    "$L_PROMPT" \
     >> "$TMP"
 
 printf \
