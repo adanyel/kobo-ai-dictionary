@@ -41,5 +41,25 @@ LIMIT 8;
 " 2>/dev/null
 
 echo
+echo "EPUB file descriptors held by Kobo reader processes (read-only):"
+echo "------------------------------------------------"
+NICKEL_PIDS="$(pidof adobehost nickel 2>/dev/null)"
+if [ -z "$NICKEL_PIDS" ]; then
+    echo "Kobo reader processes not found."
+else
+    for NICKEL_PID in $NICKEL_PIDS; do
+        printf "Reader PID: %s (%s)\n" "$NICKEL_PID" "$(readlink "/proc/$NICKEL_PID/exe" 2>/dev/null)"
+        for FD in /proc/"$NICKEL_PID"/fd/*; do
+            TARGET="$(readlink "$FD" 2>/dev/null)" || continue
+            case "$TARGET" in
+                /mnt/onboard/*.epub|/mnt/onboard/*.kepub.epub)
+                    printf '%s -> %s\n' "${FD##*/}" "$TARGET"
+                    ;;
+            esac
+        done
+    done
+fi
+
+echo
 echo "Run this immediately after switching books, before repeated lookups."
 echo "Do not publish the output without reviewing it: it contains book metadata."

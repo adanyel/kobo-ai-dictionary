@@ -8,11 +8,11 @@ It is designed for readers who want AI-assisted vocabulary and contextual explan
 
 ## First release status
 
-Suitable as an **experimental first release** for the tested configuration below. Book-context selection is not yet reliable immediately after switching books.
+This is an **experimental first release**. The original build has a known issue: after switching books, some lookups may temporarily use the previous book's context; the issue tends to correct itself after a few searches.
 
-**Known issue:** after changing books, some lookups may temporarily use the previous book's context. The issue tends to correct itself after a few searches, but recovery is not guaranteed. Check the displayed title and excerpt before relying on a contextual explanation.
+The current code identifies the EPUB from the running Kobo Adobe renderer instead of choosing the most recently saved database row. If the active EPUB cannot be identified unambiguously, it shows a general explanation rather than guessing a book.
 
-See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for evidence, limitations, and the investigation status. This issue is unresolved; the first release should not be presented as stable or as reliably identifying the active book.
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the fix, device evidence, and remaining limitations. Check the displayed title and excerpt before relying on a contextual explanation.
 
 ## Why this project
 
@@ -71,8 +71,8 @@ The full extracted context can be sent to Gemini for interpretation, but the rea
 
 1. Select a word or expression in an EPUB.
 2. Tap **AI Dictionary** from the Kobo selection menu.
-3. The script reads Kobo's database in read-only mode to identify candidate books and the current reading position.
-4. `kobo-context` checks the EPUB and extracts nearby text.
+3. The script identifies the EPUB held open by Kobo's Adobe renderer, then reads that book's metadata and saved reading position from Kobo's database in read-only mode.
+4. `kobo-context` extracts nearby text. Its output is accepted only when it succeeds and contains the selected text; chapter/book fallback searches stay within the same identified EPUB.
 5. The EPUB language is detected locally.
 6. Gemini receives the selected text plus relevant book context.
 7. A lightweight HTML result opens in Kobo's internal browser.
@@ -84,7 +84,8 @@ A separate **AI Dictionary - Search** entry is also available for manual searche
 Validated on:
 
 - Kobo Libra Colour
-- Kobo firmware **4.45.23792**
+- original release: Kobo firmware **4.45.23792**
+- book-switch fix: live extraction checks on firmware **4.46.23836**
 - native Kobo/Nickel reader
 - sideloaded/local EPUB files
 - NickelMenu
@@ -138,18 +139,17 @@ The Gemini API key remains on the Kobo at:
 
 Never commit this file, `KoboReader.sqlite`, personal EPUBs, or debug files containing book text.
 
-## Known issue in the first release
+## Book-switch fix and original-release issue
 
-After switching from one EPUB to another, Kobo AI Dictionary may temporarily use the previous book's metadata or context for the first lookup(s). After Nickel updates its reading state, subsequent lookups normally use the new book correctly.
+The original first-release build can temporarily use the previous book's context after switching EPUBs, often correcting itself after a few searches. The current implementation replaces that database-order heuristic with live renderer identification.
 
-This is currently treated as a known issue rather than silently hidden with an untested workaround.
-
-Technical notes and the current investigation are documented in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+On a device without an identifiable Adobe-rendered EPUB, book context is unavailable and the dictionary gives a general explanation. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for validation and scope.
 
 ## Current limitations
 
 - primarily validated on Kobo Libra Colour;
-- validated on firmware 4.45.23792;
+- original release tested on firmware 4.45.23792; live book-switch extraction tested on 4.46.23836;
+- book-specific context requires one identifiable EPUB held by `/usr/local/Kobo/adobehost`; unavailable or ambiguous renderer state falls back to a general explanation;
 - designed for EPUB files accessible on the device filesystem;
 - Kobo Store KEPUB, PDF, and other formats are not currently considered supported;
 - Wi-Fi is required when contacting Gemini;

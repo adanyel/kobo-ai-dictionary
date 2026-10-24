@@ -66,15 +66,15 @@ Possible causes include:
 
 The installation checker never prints the API key.
 
-## The wrong book is detected
+## The wrong book is detected or book context is unavailable
 
-Kobo's database can contain several records with `ReadStatus=1`.
+The original first-release script chose books using saved `DateLastRead` ordering and could temporarily use the previous book after a switch. Update `src/ai-dictionary.sh` on the Kobo to use the current renderer-based selection.
 
-The script orders candidate books by `DateLastRead` and accepts the first nonempty `kobo-context` result. A nonempty result does **not** prove that the selected text occurs in it or that the book is currently open.
+The current script requires exactly one EPUB held by Kobo's Adobe renderer. It reads metadata and saved positions only for that EPUB, verifies helper output contains the selected text, and keeps fallback searches inside the same book. It does not guess from `ReadStatus` or timestamps if the renderer is unavailable or ambiguous.
 
-After switching books, some lookups may temporarily use the previous book's context. The issue tends to correct itself after a few searches, but this is not guaranteed. Check the displayed book title and excerpt. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the investigation and remaining uncertainties.
+“Book context unavailable” means a general explanation is being shown. Open a supported local EPUB in the standard reader and try again. Other reading engines, unsupported formats, or multiple distinct open EPUBs may prevent identification.
 
-If debugging is required, keep debug files private: they may contain book titles or excerpts.
+For diagnosis, run `diagnostics/book-switch.sh` immediately after a switch and compare the open renderer path with the saved database rows. Keep the output private because it contains book metadata. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the investigation and validation limits.
 
 ## The interface language is wrong
 

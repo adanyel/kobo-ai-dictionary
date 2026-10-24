@@ -134,11 +134,13 @@ The script reads:
 
 `/mnt/onboard/.kobo/KoboReader.sqlite`
 
-in read-only mode to identify the current book and reading position.
+in read-only mode to retrieve metadata and the saved reading position for the EPUB already identified from the live renderer. Database timestamps do not select the book.
 
 Do not copy this database into the repository.
 
 ## Standard shell utilities
+
+Book identification reads `/proc/<pid>/exe` and `/proc/<pid>/fd` for `/usr/local/Kobo/adobehost`. It requires `pidof`, `readlink`, `sort`, and `wc`, available in the tested environment. If these checks cannot identify exactly one EPUB, the dictionary uses general mode. No new daemon or database writer is installed.
 
 The scripts also use standard commands such as `sed`, `awk`, `grep`, `cut`, `tr`, `head`, `cat`, `cp`, `mv`, and `rm`.
 

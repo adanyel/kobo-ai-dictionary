@@ -88,12 +88,12 @@ clean_epub_html() {
         -e 's#<br[^>]*>#\n#g' \
         -e 's#<[^>]*># #g' \
         -e 's#\&nbsp;# #g' \
-        -e 's#\&#160;# #g' \
-        -e 's#\&#xA0;# #g' \
+        -e 's#\&\#160;# #g' \
+        -e 's#\&\#xA0;# #g' \
         -e 's#\&amp;#\&#g' \
         -e 's#\&quot;#"#g' \
         -e "s#\&apos;#'#g" \
-        -e 's#\&#39;#'\''#g' \
+        -e 's#\&\#39;#'\''#g' \
     | normalize_text \
     | tr -d '\302\255' \
     | sed 's/[[:space:]][[:space:]]*/ /g;s/^ *//;s/ *$//' \
@@ -301,6 +301,63 @@ make_display_context() {
     }'
 }
 
+# Resolve the EPUB held by Kobo's Adobe renderer, independently of saved
+# reading timestamps. Multiple distinct paths are ambiguous: never guess.
+active_reader_epub() (
+    PROC_ROOT="${1:-/proc}"
+    READER_PATHS="$(
+        for READER_PID in $(pidof adobehost 2>/dev/null); do
+            READER_EXE="$(readlink "$PROC_ROOT/$READER_PID/exe" 2>/dev/null)"
+            [ "$READER_EXE" = "/usr/local/Kobo/adobehost" ] || continue
+            for READER_FD in "$PROC_ROOT/$READER_PID"/fd/*; do
+                READER_TARGET="$(readlink "$READER_FD" 2>/dev/null)" || continue
+                case "$READER_TARGET" in
+                    (/mnt/onboard/*.epub)
+                        # The database row format is line/pipe separated.
+                        case "$READER_TARGET" in
+                            (*'|'*|*'
+'*) printf '%s\n' INVALID_READER_PATH; continue ;;
+                        esac
+                        printf '%s\n' "$READER_TARGET"
+                        ;;
+                esac
+            done
+        done | sort -u
+    )"
+    [ -n "$READER_PATHS" ] || return 1
+    [ "$(printf '%s\n' "$READER_PATHS" | wc -l)" -eq 1 ] || return 1
+    case "$READER_PATHS" in
+        (/mnt/onboard/*.epub) printf '%s' "$READER_PATHS" ;;
+        *) return 1 ;;
+    esac
+)
+
+# Normalize whitespace and soft hyphens on both sides. An absent selected
+# term must not turn a saved-position excerpt into a successful match.
+context_contains_selection() (
+    MATCH_NEEDLE="$(printf '%s' "$1" | tr -d '\302\255' | normalize_text |
+        tr '\r\n\t' '   ' | sed 's/[[:space:]][[:space:]]*/ /g;s/^ *//;s/ *$//')"
+    [ -n "$MATCH_NEEDLE" ] || return 1
+    printf '%s' "$2" | tr -d '\302\255' | normalize_text |
+        tr '\r\n\t' '   ' | sed 's/[[:space:]][[:space:]]*/ /g' |
+        grep -iFq -- "$MATCH_NEEDLE"
+)
+
+# Info-ZIP supports -Z1; the Kobo BusyBox unzip only provides -l/-q.
+# Parse the three listing columns and preserve spaces in member names.
+list_epub_paths() (
+    if EPUB_MEMBERS="$("$UNZIP" -Z1 "$1" 2>/dev/null)"; then
+        printf '%s\n' "$EPUB_MEMBERS"
+    else
+        "$UNZIP" -lq "$1" 2>/dev/null | awk '
+            $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9][0-9-]+$/ &&
+            $3 ~ /^[0-9][0-9]:[0-9][0-9]$/ {
+                sub(/^[[:space:]]*[0-9]+[[:space:]]+[^[:space:]]+[[:space:]]+[^[:space:]]+[[:space:]]+/, "")
+                print
+            }'
+    fi
+)
+
 # ------------------------------------------------------------
 # Current Kobo book + reading position
 # ------------------------------------------------------------
@@ -316,10 +373,10 @@ CHAPTER=""
 FOUND=""
 CTX="/mnt/onboard/.adds/ai-tools/kobo-context"
 
-# Kobo may contain multiple records with ReadStatus=1.
-# Do not assume the first record is the currently visible book:
-# test candidates and choose the one in which kobo-context
-# actually finds the selected text.
+# ReadStatus and DateLastRead describe persisted reading history, not the
+# currently open book. Bind every extraction/fallback to the live renderer.
+ACTIVE_EPUB="$(active_reader_epub)"
+EPUB="$ACTIVE_EPUB"
 
 # Nickel/Kobo may pass selected text containing soft hyphens (U+00AD):
 # "go­ril­la" invece di "gorilla".
@@ -333,13 +390,15 @@ printf 'TEXT_RAW=[%s]\n' "$TEXT" >> "$DEBUG_FILE"
 printf 'TEXT_CLEAN=[%s]\n' "$TEXT_CLEAN" >> "$DEBUG_FILE"
 printf 'CTX=[%s]\n' "$CTX" >> "$DEBUG_FILE"
 
-CANDIDATES="$($SQLITE -readonly -noheader -batch "$DB" \
-    "SELECT ContentID, COALESCE(Title,''), COALESCE(Attribution,''), COALESCE(ChapterIDBookmarked,'')
-     FROM content
-     WHERE ContentType=6 AND ReadStatus=1
-       AND ContentID LIKE 'file:///mnt/onboard/%.epub%'
-       AND COALESCE(ChapterIDBookmarked,'') <> ''
-     ORDER BY DateLastRead DESC;" 2>/dev/null)"
+printf 'ACTIVE_EPUB=[%s]\n' "$ACTIVE_EPUB" >> "$DEBUG_FILE"
+CANDIDATES=""
+if [ -n "$ACTIVE_EPUB" ]; then
+    ACTIVE_CONTENT_ID="$(printf 'file://%s' "$ACTIVE_EPUB" | sed "s/'/''/g")"
+    CANDIDATES="$($SQLITE -readonly -noheader -batch "$DB" \
+        "SELECT ContentID, COALESCE(Title,''), COALESCE(Attribution,''), COALESCE(ChapterIDBookmarked,'')
+         FROM content
+         WHERE ContentType=6 AND ContentID='$ACTIVE_CONTENT_ID';" 2>/dev/null)"
+fi
 
 printf '%s\n' '--- CANDIDATES ---' >> "$DEBUG_FILE"
 printf '%s\n' "$CANDIDATES" >> "$DEBUG_FILE"
@@ -411,7 +470,7 @@ if [ -n "$CANDIDATES" ] && [ -x "$CTX" ]; then
             printf '%s\n' "$C_CONTEXT"
         } >> "$DEBUG_FILE" 2>/dev/null
 
-        if [ -n "$C_CONTEXT" ]; then
+        if [ "$C_RC" -eq 0 ] && context_contains_selection "$TEXT_CLEAN" "$C_CONTEXT"; then
             BOOK="$C_BOOK"
             BOOK_TITLE="$C_TITLE"
             BOOK_AUTHOR="$C_AUTHOR"
@@ -420,7 +479,7 @@ if [ -n "$CANDIDATES" ] && [ -x "$CTX" ]; then
             CHAPTER="$C_CHAPTER"
             FOUND="$C_CHAPTER"
             BOOK_CONTEXT="$C_CONTEXT"
-            CONTEXT_SOURCE="current book position (kobo-context)"
+            CONTEXT_SOURCE="selected text in renderer-identified book (kobo-context)"
 
             printf '%s\n' "$BOOK_CONTEXT" \
                 > /mnt/onboard/.adds/ai-kobo-context.txt 2>/dev/null
@@ -433,8 +492,8 @@ $CANDIDATES
 EOF_CANDIDATES
 fi
 
-# If no candidate produced context, keep the most recent record
-# so later fallback stages can still run.
+# Metadata/position fallbacks remain restricted to the renderer-identified
+# EPUB, even when no selected-text passage was returned by the helper.
 if [ -z "$BOOK" ] && [ -n "$CANDIDATES" ]; then
     ROW="$(printf '%s\n' "$CANDIDATES" | head -n 1)"
     BOOK="$(printf '%s\n' "$ROW" | cut -d'|' -f1)"
@@ -466,14 +525,14 @@ if [ -z "$CHAPTER" ] && [ -n "$CFI" ]; then
 fi
 
 if [ -z "$FOUND" ] && [ -f "$EPUB" ] && [ -n "$CHAPTER" ]; then
-    if "$UNZIP" -Z1 "$EPUB" 2>/dev/null |
+    if list_epub_paths "$EPUB" |
         grep -F -x -- "$CHAPTER" >/dev/null 2>&1
     then
         FOUND="$CHAPTER"
     else
         C_NAME="${CHAPTER##*/}"
         FOUND="$(
-            "$UNZIP" -Z1 "$EPUB" 2>/dev/null |
+            list_epub_paths "$EPUB" |
             awk -v n="$C_NAME" '{
                 b=$0
                 sub(/^.*\//,"",b)
@@ -511,10 +570,12 @@ then
             printf 'PRIMARY_KOBO_CONTEXT_RC=%s\n' "$KOBO_RC" >> "$DEBUG_FILE" 2>/dev/null
             printf 'PRIMARY_KOBO_CONTEXT_LEN=%s\n' "${#BOOK_CONTEXT}" >> "$DEBUG_FILE" 2>/dev/null
 
-            if [ -n "$BOOK_CONTEXT" ]; then
-                CONTEXT_SOURCE="current book position (kobo-context)"
+            if [ "$KOBO_RC" -eq 0 ] && context_contains_selection "$TEXT_CLEAN" "$BOOK_CONTEXT"; then
+                CONTEXT_SOURCE="selected text in renderer-identified book (kobo-context)"
                 printf '%s\n' "$BOOK_CONTEXT" \
                     > /mnt/onboard/.adds/ai-kobo-context.txt 2>/dev/null
+            else
+                BOOK_CONTEXT=""
             fi
             ;;
     esac
@@ -554,7 +615,7 @@ then
 
     : > "$ALLRAW"
 
-    "$UNZIP" -Z1 "$EPUB" 2>/dev/null |
+    list_epub_paths "$EPUB" |
         grep -Ei '\.(xhtml|html|htm)$' |
         while IFS= read -r F; do
 
@@ -619,6 +680,17 @@ then
             CONTEXT_SOURCE="exact occurrence found in book"
         fi
     fi
+fi
+
+# Do not publish context if the user switched books during extraction.
+if [ -n "$ACTIVE_EPUB" ] && [ "$(active_reader_epub)" != "$ACTIVE_EPUB" ]; then
+    BOOK=""
+    BOOK_TITLE="Book not identified"
+    BOOK_AUTHOR="Author not identified"
+    EPUB=""
+    BOOK_CONTEXT=""
+    ACTIVE_EPUB=""
+    printf 'BOOK_CHANGED_DURING_EXTRACTION=1\n' >> "$DEBUG_FILE"
 fi
 
 # ------------------------------------------------------------
@@ -698,8 +770,13 @@ $BOOK_CONTEXT
 
 CONTEXT INTERPRETATION:
 
-The book title and author are important information and must be actively used
-to interpret the selected text.
+If the book is not identified, provide a general lexical explanation only.
+Do not infer a book, author, scene, character, or quotation from the selected
+text alone. State briefly in the context field that book context is unavailable.
+If no specific passage was retrieved, do not claim to explain the current scene.
+
+When identified, use the supplied book title and author to interpret the
+selected text. Missing metadata is not evidence of a particular work.
 
 Do not automatically limit the answer to the most common dictionary meaning.
 
@@ -1239,6 +1316,10 @@ printf \
     >> "$TMP"
 
 printf '</header>\n<hr class="rule">\n' >> "$TMP"
+
+if [ -z "$ACTIVE_EPUB" ]; then
+    printf '<p class="bookmeta">Book context unavailable. Showing a general explanation.</p>\n' >> "$TMP"
+fi
 
 # ------------------------------------------------------------
 # Extract Gemini fields

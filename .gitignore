@@ -18,3 +18,7 @@ ai-all-book*.txt
 # OS/editor files
 .DS_Store
 Thumbs.db
+
+# Local Python regression-test output
+__pycache__/
+*.py[cod]

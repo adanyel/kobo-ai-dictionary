@@ -22,3 +22,6 @@ jobs:
           sh -n src/ai-search.sh
           sh -n src/check-install.sh
           sh -n diagnostics/book-switch.sh
+
+      - name: Test book context selection
+        run: python3 -m unittest discover -s tests -v

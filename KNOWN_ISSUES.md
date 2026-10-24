@@ -1,111 +1,55 @@
-# Known Issues
+# Known issues and book-switch fix
 
-## Book switch can temporarily use the previous book
+## Original first release: previous book context after switching books
 
-**Status:** confirmed by device use; root cause still under investigation.
+The original first-release build has a known issue: after changing books, some dictionary lookups may temporarily use the previous book's title, author, or context. Users report that it tends to correct itself after a few searches; recovery is not guaranteed.
 
-### Symptom
+The fix in the current code, also installed and tested on the connected Kobo, replaces saved database ordering with the EPUB held open by Kobo's running Adobe renderer. Validation and remaining limits are described below. The original behavior is preserved for reference in `backup/main-before-context-fix-2026-10-24`.
 
-After leaving one EPUB and opening another, the first AI Dictionary lookup may occasionally show the title, author, or contextual interpretation of the previously opened book.
+## Confirmed cause on the connected Kobo
 
-After one or more additional lookups, the dictionary normally starts using the new book correctly.
+During a live test on 2026-10-24, the user opened EPUB A and then EPUB B without running the dictionary between the change and inspection.
 
-### What we know
+- `/usr/local/Kobo/adobehost` immediately held EPUB B in an open file descriptor and no longer held EPUB A.
+- `KoboReader.sqlite` still ordered EPUB A first by `DateLastRead`.
+- EPUB B retained its older `DateLastRead` and `ChapterIDBookmarked` values.
+- Multiple books retained `ReadStatus=1`.
 
-Kobo AI Dictionary does not keep the selected book in a persistent cache between lookups. Each invocation starts a fresh shell process and opens `KoboReader.sqlite` through a new `sqlite3` process.
+This directly demonstrated that saved reading state can lag behind the currently displayed book on the tested firmware, **4.46.23836**. It does not establish update timing for every Kobo firmware.
 
-The current selection logic asks Kobo's database for all EPUB rows matching:
+The old script tested those saved rows in timestamp order and accepted the first nonempty `kobo-context` result. A fresh invocation of the installed helper reproduced the previously logged case: exit status 0 and a 784-character passage without the selected term. A synthetic EPUB test confirmed that the helper can distinguish present and absent terms in a simple case, so a nonempty output must still be checked independently.
 
-- `ContentType = 6`
-- `ReadStatus = 1`
-- a non-empty `ChapterIDBookmarked`
+Each dictionary invocation initializes its variables and makes a new Gemini request. The inspected path does not reload the previous generated answer as conversation history. The confirmed cause is book selection from stale saved state, not a persistent AI conversation cache.
 
-and orders them by `DateLastRead DESC`.
+## Current behavior
 
-The script then tests the candidates with `kobo-context` and currently accepts the first candidate that returns non-empty context.
+1. Find `adobehost` processes and verify their executable path is `/usr/local/Kobo/adobehost`.
+2. Read their open file descriptors and require exactly one distinct local EPUB path. Duplicate descriptors for the same EPUB are harmless; different paths are ambiguous.
+3. Query only that EPUB's `ContentID` for metadata and its saved chapter position. `ReadStatus`, missing bookmarks, and `DateLastRead` no longer exclude or select a book.
+4. Accept helper output only if its exit status is zero and its normalized passage contains the selected text.
+5. Keep chapter and full-EPUB fallbacks restricted to that same file. The fallback HTML cleaner also corrects three unescaped numeric-entity delimiters that otherwise caused `sed` to fail. EPUB member listing supports both Info-ZIP `-Z1` and the installed BusyBox `-lq` output; the installed BusyBox rejects `-Z1`.
+6. Check the renderer path again after extraction. If it changed, discard the book metadata and passage for that lookup.
 
-### Most likely explanation
+If no unambiguous supported renderer path is available, the page explicitly says book context is unavailable and the prompt requests a general lexical explanation. There is no fallback to the most recently read book.
 
-The observed behavior is consistent with Kobo/Nickel not having written the newly opened book's latest `DateLastRead` and/or `ChapterIDBookmarked` state to `KoboReader.sqlite` yet when the first lookup is launched.
+## Validation
 
-If the previous book is still ordered first, the current candidate-selection heuristic can choose it.
+Twelve automated regression tests execute the production shell functions and extraction block, using synthetic process descriptors, a real temporary SQLite database, and temporary EPUBs. They cover stale timestamps, unread status, filenames containing apostrophes, missing chapter positions, helper errors, non-matching passages, ambiguous or unavailable renderer state, unsupported row delimiters, whitespace/soft-hyphen normalization, numeric HTML entities, BusyBox-compatible archive listing, and a switch during extraction.
 
-This is a working hypothesis, not yet a confirmed upstream Kobo behavior.
+Extraction-only copies of the corrected pipeline were run directly on the Kobo in both switch directions, including two filesystem copies of the same title. Each selected the EPUB actually held by the renderer, despite stale database ordering. A forced helper-unavailable test also retrieved a matching passage from the correct chapter using BusyBox unzip.
 
-### Additional weakness in the current heuristic
+After installation, a full dictionary invocation completed successfully (exit status 0, empty error log) and generated an HTML result with the correct title/author and Italian localization. The previous book title was absent from that result. This validates extraction, the Gemini response, and HTML generation. The user then switched to the other EPUB and immediately ran AI Dictionary from the selection menu; they confirmed that the first displayed result identified the correct book.
 
-The candidate loop currently checks whether `kobo-context` returned non-empty text. It does not independently verify that the returned context actually contains the normalized selected text before accepting that candidate.
+The previous installed script was preserved as `.adds/ai-dictionary.sh.before-context-fix-20261024`. The installed fix was verified against the repository script by SHA-256.
 
-A possible future mitigation is to require a real selected-text match before accepting a candidate. This should reduce false positives, but it cannot fully solve cases where the same selected word occurs in both the previous and current book.
+The database remained read-only. No firmware, reader libraries, renderer processes, or database records were modified. Personal database files and extracted passages are not included in this repository.
 
-### Why this is not patched yet
+## Remaining limitations
 
-There is no documented NickelMenu substitution for the current book ID/path: selection substitutions expose the selected text only.
+- The original release was validated on firmware 4.45.23792. Live investigation of this fix used firmware 4.46.23836; other renderer/firmware combinations need validation.
+- Book-specific context currently requires the identifiable Adobe EPUB renderer. Other formats and reading engines may use general mode.
+- A saved chapter position can still lag within the correct book. A full-book fallback may select another occurrence of the same word; exact current-sentence identification is not guaranteed.
+- Multiple distinct EPUB descriptors cause general mode rather than an arbitrary choice.
+- AI explanations can still be inaccurate. Check the displayed title and excerpt.
 
-NickelDBus exposes the current Nickel view, but not a documented current-book ContentID.
-
-Because the existing reading-context pipeline is otherwise stable, the project does not currently apply an untested delay, forced database refresh, or write operation to `KoboReader.sqlite`.
-
-The database remains read-only.
-
-### Reproduction
-
-1. Open EPUB A and use AI Dictionary.
-2. Leave EPUB A.
-3. Open EPUB B.
-4. Immediately select a word in EPUB B and run AI Dictionary.
-5. Check the title/author and contextual explanation in the result.
-6. Repeat the lookup once or twice.
-
-On affected runs, the first result may refer to EPUB A before later lookups correctly use EPUB B.
-
-### Planned investigation
-
-The safest next test is to capture, immediately after a book switch:
-
-- the top `ReadStatus=1` rows;
-- `DateLastRead`;
-- `ChapterIDBookmarked`;
-- candidate order;
-- whether each `kobo-context` result actually contains the selected term.
-
-The optional diagnostic script in `diagnostics/book-switch.sh` is intended for this investigation.
-
-### Investigation on 2026-10-24
-
-The connected Kobo was accessible as a USB volume. Inspection was read-only; no device scripts, database records, firmware, or settings were changed. Personal database copies were temporary and were not committed. The installed `ai-dictionary.sh` and `kobo-context` matched the repository versions by SHA-256.
-
-A temporary local copy of `KoboReader.sqlite` passed SQLite `quick_check`. Eight records matched the script's candidate query:
-
-- `ContentType=6`, `ReadStatus=1`;
-- a local EPUB `ContentID`;
-- a nonempty `ChapterIDBookmarked`;
-- ordered by `DateLastRead DESC`.
-
-Multiple books retained `ReadStatus=1`; it is not an active-book flag. `ChapterIDBookmarked` contained saved chapter/point positions for multiple candidates. `DateLastRead` provides the ordering used by the script, but a static USB snapshot cannot establish when Nickel updates it during a book switch. Delayed database updates remain a hypothesis, not a verified firmware behavior.
-
-The existing device debug log showed a successful helper call (exit status 0) returning 784 characters without the selected term. The script accepted that first candidate and did not test the others. This demonstrates that nonempty helper output is not proof of a selected-text match. It does not establish which book was visible at the time of that lookup.
-
-A controlled local test executed the actual candidate-loop block from `src/ai-dictionary.sh` with two synthetic candidates and a stub helper returning a non-matching passage. It reproduced selection of the previous book and termination after one candidate.
-
-### Cause and limits
-
-The menu passes selected text only, without a book identifier. The candidate loop treats any nonempty helper result as a match, ignores its exit status when deciding acceptance, and stops at the first such result. Later fallback stages continue using the chosen book. This is a confirmed selection weakness that can explain the reported symptom when candidate ordering is stale or ambiguous.
-
-The script initializes its book variables on each invocation, reads helper output from a freshly redirected file, and makes a new Gemini request. The inspected path does not reload a previous generated answer as a conversation or use an old context file as its input. This points toward book selection rather than an AI conversation cache; it does not exclude other runtime issues.
-
-`kobo-context` is supplied here as a stripped ARMv7 binary without source. It could not be executed natively on the host. Existing on-device output was inspected, but no live Nickel book-switch sequence or new end-to-end Gemini lookup was performed over the USB connection.
-
-### Why no runtime change was made
-
-Requiring the selected term in a passage could reject one observed false match, but common words can occur in multiple books, and the saved position may omit the current selection. Restricting selection to the newest row still relies on the timestamp whose update timing is unverified. Neither change establishes the active book reliably.
-
-No speculative delays, database writes, cache deletion, helper replacement, or infrastructure changes were introduced. A safe fix needs a verified active-book signal or a validated way to decline book-specific context when identity is ambiguous.
-
-### Validation needed before resolving
-
-On the running Kobo reader, capture candidate ordering and saved positions before and after switching between two EPUBs. Test both a distinctive expression and a word shared by the books. Compare the visible book with the chosen candidate and verify helper behavior for a missing term, a nonzero exit, and stale chapter positions. Keep logs private because they may contain book excerpts.
-
-### Release assessment
-
-Appropriate for a clearly labeled experimental first release on the documented tested configuration, with this limitation prominently disclosed. Not ready to claim stable active-book detection. The issue remains open; no release tag or GitHub Release was created by this investigation.
+Use `diagnostics/book-switch.sh` to inspect both saved database candidates and live reader descriptors. Keep its output private because it contains book metadata. The first release remains experimental.
