@@ -21,3 +21,4 @@ jobs:
           sh -n src/ai-dictionary.sh
           sh -n src/ai-search.sh
           sh -n src/check-install.sh
+          sh -n diagnostics/book-switch.sh
