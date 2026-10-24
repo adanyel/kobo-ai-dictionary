@@ -970,7 +970,7 @@ render_translation_lines() {
                 V="${LINE#*:}"
 
                 printf \
-                    '<div class="translation"><span class="label">%s:</span> %s</div>\n' \
+                    '<div class="translation"><span class="translation-label">%s</span><span class="translation-value">%s</span></div>\n' \
                     "$L_LANG_EN" \
                     "$(format_inline "$(printf '%s' "$V" | sed 's/^ *//')")" \
                     >> "$TMP"
@@ -981,7 +981,7 @@ render_translation_lines() {
                 V="${LINE#*:}"
 
                 printf \
-                    '<div class="translation"><span class="label">%s:</span> %s</div>\n' \
+                    '<div class="translation"><span class="translation-label">%s</span><span class="translation-value">%s</span></div>\n' \
                     "$L_LANG_ES" \
                     "$(format_inline "$(printf '%s' "$V" | sed 's/^ *//')")" \
                     >> "$TMP"
