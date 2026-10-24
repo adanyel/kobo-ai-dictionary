@@ -6,6 +6,14 @@ Kobo AI Dictionary lets you select a word or expression while reading an EPUB an
 
 It is designed for readers who want AI-assisted vocabulary and contextual explanations **without replacing Kobo's native reading interface**.
 
+## First release status
+
+Suitable as an **experimental first release** for the tested configuration below. Book-context selection is not yet reliable immediately after switching books.
+
+**Known issue:** after changing books, some lookups may temporarily use the previous book's context. The issue tends to correct itself after a few searches, but recovery is not guaranteed. Check the displayed title and excerpt before relying on a contextual explanation.
+
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for evidence, limitations, and the investigation status. This issue is unresolved; the first release should not be presented as stable or as reliably identifying the active book.
+
 ## Why this project
 
 Most advanced Kobo extensions rely on alternative reading software. This project takes a different approach:

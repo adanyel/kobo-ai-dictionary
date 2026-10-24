@@ -70,7 +70,9 @@ The installation checker never prints the API key.
 
 Kobo's database can contain several records with `ReadStatus=1`.
 
-The script tests candidate books and uses `kobo-context` to select the EPUB in which the selected text is actually found.
+The script orders candidate books by `DateLastRead` and accepts the first nonempty `kobo-context` result. A nonempty result does **not** prove that the selected text occurs in it or that the book is currently open.
+
+After switching books, some lookups may temporarily use the previous book's context. The issue tends to correct itself after a few searches, but this is not guaranteed. Check the displayed book title and excerpt. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the investigation and remaining uncertainties.
 
 If debugging is required, keep debug files private: they may contain book titles or excerpts.
 
