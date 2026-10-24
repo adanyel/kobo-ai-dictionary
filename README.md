@@ -138,6 +138,14 @@ The Gemini API key remains on the Kobo at:
 
 Never commit this file, `KoboReader.sqlite`, personal EPUBs, or debug files containing book text.
 
+## Known issue in the first release
+
+After switching from one EPUB to another, Kobo AI Dictionary may temporarily use the previous book's metadata or context for the first lookup(s). After Nickel updates its reading state, subsequent lookups normally use the new book correctly.
+
+This is currently treated as a known issue rather than silently hidden with an untested workaround.
+
+Technical notes and the current investigation are documented in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+
 ## Current limitations
 
 - primarily validated on Kobo Libra Colour;
