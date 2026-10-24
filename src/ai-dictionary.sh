@@ -250,56 +250,78 @@ set_ui_labels() {
     esac
 }
 
-make_display_context() {
-    FULL_CONTEXT="$1"
-    NEEDLE="$2"
-
-    case "$FULL_CONTEXT" in
-        ""|"[NO SPECIFIC PASSAGE RETRIEVED FROM THE BOOK]")
-            return 0
-            ;;
+make_display_context() (
+    LC_ALL=C
+    export LC_ALL
+    case "$1" in
+        ""|"[NO SPECIFIC PASSAGE RETRIEVED FROM THE BOOK]") return 0 ;;
     esac
 
-    printf '%s' "$FULL_CONTEXT" |
-    tr '\r\n\t' '   ' |
+    DISPLAY_NEEDLE="$(printf '%s' "$2" | sed 's/­//g' |
+        tr '\r\n\t' '   ' | sed 's/[[:space:]][[:space:]]*/ /g;s/^ *//;s/ *$//')"
+    [ -n "$DISPLAY_NEEDLE" ] || return 0
+
+    printf '%s' "$1" | sed 's/­//g' | tr '\r\n\t' '   ' |
     sed 's/[[:space:]][[:space:]]*/ /g;s/^ *//;s/ *$//' |
-    awk -v needle="$NEEDLE" '
+    DISPLAY_NEEDLE="$DISPLAY_NEEDLE" awk '
     {
         text=$0
-        low=tolower(text)
-        n=tolower(needle)
-        pos=index(low,n)
-        maxlen=560
+        needle=ENVIRON["DISPLAY_NEEDLE"]
+        pos=index(tolower(text),tolower(needle))
+        maxlen=280
+        if (!pos || length(needle)>maxlen) exit
+        last=pos+length(needle)-1
+        start=1
+        finish=length(text)
 
-        if (length(text) <= maxlen) {
-            print text
-            exit
+        for (i=1; i<=length(text); i++) {
+            ch=substr(text,i,1)
+            if (ch !~ /[.!?]/) continue
+            # A period inside a number, acronym, or common title is not
+            # a sentence boundary. Preserve literal source punctuation.
+            if (ch==".") {
+                prefix=substr(text,1,i-1)
+                sub(/^.*[[:space:]]/,"",prefix)
+                token=tolower(prefix)
+                if (token ~ /^(mr|mrs|ms|dr|prof|sr|sra|jr|st|vs|sig|dott|etc)$/ ||
+                    token ~ /^[[:alpha:]]$/ || token ~ /[[:alpha:]]\.[[:alpha:]]$/)
+                    continue
+            }
+            j=i+1
+            while (j<=length(text) && index(".!?\"\047”’»)]",substr(text,j,1))) j++
+            if (j<=length(text) && substr(text,j,1)!=" ") continue
+            if (j-1<pos) start=j
+            else if (i>=last) { finish=j-1; break }
+            i=j-1
         }
-
-        if (pos > 0) {
-            start=pos-180
-            if (start < 1)
-                start=1
-        } else {
-            start=1
+        while (substr(text,start,1)==" ") start++
+        # Exceptionally long sentences use a bounded, word-aligned extract.
+        # Both ellipses explicitly mark omitted source text.
+        clippedLeft=0
+        clippedRight=0
+        if (finish-start+1>maxlen) {
+            wanted=pos-80
+            if (wanted>start) {
+                start=wanted
+                while (start<pos && substr(text,start-1,1)!=" ") start++
+                clippedLeft=1
+            }
+            end=start+maxlen-1
+            if (end<last) end=last
+            if (end<finish) {
+                while (end>last && substr(text,end+1,1)!=" ") end--
+                finish=end
+                clippedRight=1
+            }
         }
-
-        out=substr(text,start,maxlen)
-
-        if (start > 1) {
-            sub(/^[^ ]* /,"",out)
-            out="… " out
-        }
-
-        if (start+maxlen <= length(text)) {
-            sub(/ [^ ]*$/,"",out)
-            out=out " …"
-        }
-
+        out=substr(text,start,finish-start+1)
+        sub(/^ +/,"",out)
+        sub(/ +$/,"",out)
+        if (clippedLeft) out="… " out
+        if (clippedRight) out=out " …"
         print out
-        exit
     }'
-}
+)
 
 # Resolve the EPUB held by Kobo's Adobe renderer, independently of saved
 # reading timestamps. Multiple distinct paths are ambiguous: never guess.
@@ -1119,7 +1141,7 @@ body{
 }
 
 .entry-header{
-    margin-bottom:15px
+    margin-bottom:12px
 }
 
 .headword{
@@ -1149,11 +1171,11 @@ body{
 .rule{
     border:0;
     border-top:1px solid #d0d0d0;
-    margin:14px 0 16px 0
+    margin:12px 0 14px 0
 }
 
 .entry-field{
-    margin:0 0 14px 0
+    margin:0 0 12px 0
 }
 
 .field-label{
@@ -1174,25 +1196,23 @@ body{
 }
 
 .bookctx{
-    margin:2px 0 16px 0;
-    padding:9px 11px;
-    border-left:3px solid #999;
-    background:#f7f7f7;
-    font-size:17px;
-    line-height:1.42;
-    color:#333
+    margin:4px 0 15px 0;
+    padding:2px 0 2px 10px;
+    border-left:2px solid #aaa;
+    font-size:16px;
+    line-height:1.35;
+    color:#444
 }
 
 .bookctx-label{
-    display:block;
+    display:inline;
     font-family:Arial,Helvetica,sans-serif;
     font-size:11px;
     line-height:1.2;
     font-weight:700;
     letter-spacing:.4px;
-    text-transform:uppercase;
-    color:#666;
-    margin-bottom:4px
+    color:#555;
+    margin-right:5px
 }
 
 .bookctx-text{
@@ -1400,8 +1420,6 @@ render_field "$L_MEANING" "$MEANING"
 
 render_field "$L_CONTEXT" "$CONTEXT"
 
-render_field "$L_ETYMOLOGY" "$ETYMOLOGY"
-
 # ------------------------------------------------------------
 # Short source excerpt for the reader.
 # The full BOOK_CONTEXT is still sent to Gemini.
@@ -1410,12 +1428,14 @@ render_field "$L_ETYMOLOGY" "$ETYMOLOGY"
 if [ -n "$BOOK_CONTEXT_DISPLAY" ]; then
 
     printf \
-        '<aside class="bookctx"><span class="bookctx-label">%s</span><span class="bookctx-text">%s</span></aside>\n' \
+        '<blockquote class="bookctx"><span class="bookctx-label">%s:</span> <span class="bookctx-text">%s</span></blockquote>\n' \
         "$L_FROM_BOOK" \
         "$(format_inline "$BOOK_CONTEXT_DISPLAY")" \
         >> "$TMP"
 
 fi
+
+render_field "$L_ETYMOLOGY" "$ETYMOLOGY"
 
 # ------------------------------------------------------------
 # Remaining fields

@@ -65,7 +65,7 @@ Depending on the selected text, the result may include:
 - false friends;
 - grammar.
 
-The full extracted context can be sent to Gemini for interpretation, but the reader UI shows only a short excerpt around the selected term to keep the page compact.
+The full extracted context can be sent to Gemini for interpretation, but the reader UI shows only the sentence containing the selected term, directly below its contextual explanation. Exceptionally long sentences are shortened around the term, with ellipses marking omissions. Unmatched passages are not shown as quotations.
 
 ## How it works
 
