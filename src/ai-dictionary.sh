@@ -768,7 +768,20 @@ STYLE:
 - no tables;
 - no numbered lists;
 - use italics or bold only when useful;
-- do not repeat field names inside field values.
+- do not repeat field names inside field values;
+- do not repeat the selected word just to introduce a definition;
+- each field must add new information instead of paraphrasing the previous field;
+- keep "meaning" lexical and compact;
+- keep "context" specific to this passage or work;
+- start "context" directly with the useful interpretation;
+- NEVER begin "context" with generic formulas such as:
+  "In this context", "Here", "In the passage", "The word means",
+  "Nel contesto", "In questo contesto", "Qui", "Nel brano",
+  "En este contexto", "Aquí", "En el pasaje", or close equivalents;
+- do not begin "eli5" with formulas such as "Simply put", "In simple terms",
+  "In parole semplici", "Detto semplicemente", "En pocas palabras";
+- avoid repeating the same definition in meaning, context, ELI5, and usage;
+- usage should focus on register, construction, nuance, or when the expression is normally used.
 
 Return ONLY the JSON required by the schema.
 All properties must be present.
@@ -917,7 +930,7 @@ render_field() {
     [ -z "$VALUE" ] && return 0
 
     printf \
-        '<div class="section"><span class="label">%s:</span> %s</div>\n' \
+        '<section class="entry-field"><div class="field-label">%s</div><div class="field-value">%s</div></section>\n' \
         "$LABEL" \
         "$(format_inline "$VALUE")" \
         >> "$TMP"
@@ -946,7 +959,7 @@ render_translation_lines() {
                 V="${LINE#*:}"
 
                 printf \
-                    '<div class="translation"><span class="label">%s:</span> %s</div>\n' \
+                    '<div class="translation"><span class="translation-label">%s</span><span class="translation-value">%s</span></div>\n' \
                     "$L_LANG_IT" \
                     "$(format_inline "$(printf '%s' "$V" | sed 's/^ *//')")" \
                     >> "$TMP"
@@ -977,7 +990,7 @@ render_translation_lines() {
             *)
 
                 printf \
-                    '<div class="translation">%s</div>\n' \
+                    '<div class="translation"><span class="translation-value">%s</span></div>\n' \
                     "$(format_inline "$LINE")" \
                     >> "$TMP"
                 ;;
@@ -1004,89 +1017,166 @@ cat > "$TMP" <<'EOF3'
 
 <style>
 
+*{
+    box-sizing:border-box
+}
+
 html,body{
     margin:0;
     padding:0;
     background:#fff;
-    color:#111
+    color:#171717
 }
 
 body{
     font-family:Georgia,"Times New Roman",serif;
-    font-size:20px;
-    line-height:1.34;
-    padding:18px 20px 26px 20px;
-    box-sizing:border-box
+    font-size:19px;
+    line-height:1.42;
+    padding:18px 19px 30px 19px
 }
 
 .card{
     width:100%;
-    margin:0
+    max-width:760px;
+    margin:0 auto
+}
+
+.entry-header{
+    margin-bottom:15px
 }
 
 .headword{
-    font-size:30px;
+    font-size:31px;
     line-height:1.08;
     font-weight:700;
-    margin:0 0 5px 0;
+    letter-spacing:-0.2px;
+    margin:0 0 4px 0;
     overflow-wrap:anywhere
 }
 
 .subhead{
-    font-size:16px;
-    line-height:1.25;
+    font-size:15px;
+    line-height:1.3;
     font-style:italic;
-    color:#333;
-    margin:0 0 10px 0
+    color:#555;
+    margin:0 0 7px 0
+}
+
+.bookmeta{
+    font-size:14px;
+    line-height:1.35;
+    color:#666;
+    margin:0
 }
 
 .rule{
     border:0;
-    border-top:1px solid #777;
-    margin:0 0 13px 0
+    border-top:1px solid #d0d0d0;
+    margin:14px 0 16px 0
 }
 
-.section{
-    margin:0 0 10px 0
+.entry-field{
+    margin:0 0 14px 0
 }
 
-.label{
-    font-weight:700
+.field-label{
+    font-family:Arial,Helvetica,sans-serif;
+    font-size:12px;
+    line-height:1.2;
+    font-weight:700;
+    letter-spacing:.45px;
+    text-transform:uppercase;
+    color:#666;
+    margin:0 0 3px 0
 }
 
-.translation{
-    margin:0 0 7px 0
-}
-
-.example{
-    margin:5px 0 8px 8px;
-    padding-left:10px;
-    border-left:3px solid #777;
-    font-style:italic
-}
-
-.eli5{
-    margin-left:0;
-    padding-left:10px;
-    border-left:3px solid #999
+.field-value{
+    font-size:19px;
+    line-height:1.42;
+    margin:0
 }
 
 .bookctx{
-    margin:3px 0 13px 0;
-    padding:7px 10px 7px 11px;
-    border-left:2px solid #777;
+    margin:2px 0 16px 0;
+    padding:9px 11px;
+    border-left:3px solid #999;
+    background:#f7f7f7;
     font-size:17px;
-    line-height:1.35;
+    line-height:1.42;
     color:#333
+}
+
+.bookctx-label{
+    display:block;
+    font-family:Arial,Helvetica,sans-serif;
+    font-size:11px;
+    line-height:1.2;
+    font-weight:700;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    color:#666;
+    margin-bottom:4px
 }
 
 .bookctx-text{
     font-style:italic
 }
 
-.small{
-    font-size:17px;
-    color:#444
+.eli5{
+    margin:0 0 14px 0;
+    padding:9px 11px;
+    border-left:3px solid #bbb;
+    background:#fafafa
+}
+
+.eli5-label{
+    display:block;
+    font-family:Arial,Helvetica,sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.4px;
+    color:#666;
+    margin-bottom:4px
+}
+
+.translation{
+    display:block;
+    margin:0 0 8px 0
+}
+
+.translation-label{
+    display:inline-block;
+    min-width:74px;
+    font-family:Arial,Helvetica,sans-serif;
+    font-size:12px;
+    font-weight:700;
+    color:#666;
+    vertical-align:baseline
+}
+
+.translation-value{
+    font-size:18px
+}
+
+.example{
+    margin:2px 0 14px 0;
+    padding:8px 10px;
+    border-left:3px solid #777;
+    font-style:italic;
+    background:#fbfbfb
+}
+
+.example-label{
+    display:block;
+    font-family:Arial,Helvetica,sans-serif;
+    font-size:11px;
+    line-height:1.2;
+    font-style:normal;
+    font-weight:700;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    color:#666;
+    margin-bottom:4px
 }
 
 em{
@@ -1123,6 +1213,8 @@ HEADWORD="$(
     sed 's/[[:space:]][[:space:]]*/ /g;s/^ *//;s/ *$//'
 )"
 
+printf '<header class="entry-header">\n' >> "$TMP"
+
 printf \
     '<div class="headword">%s</div>\n' \
     "$(escape_html "$HEADWORD")" \
@@ -1141,12 +1233,12 @@ if [ -n "$LANGUAGE" ]; then
 fi
 
 printf \
-    '<div class="small"><strong>%s</strong> · %s</div>\n' \
+    '<div class="bookmeta"><strong>%s</strong> · %s</div>\n' \
     "$(escape_html "$BOOK_TITLE")" \
     "$(escape_html "$BOOK_AUTHOR")" \
     >> "$TMP"
 
-printf '<hr class="rule">\n' >> "$TMP"
+printf '</header>\n<hr class="rule">\n' >> "$TMP"
 
 # ------------------------------------------------------------
 # Extract Gemini fields
@@ -1237,7 +1329,7 @@ render_field "$L_ETYMOLOGY" "$ETYMOLOGY"
 if [ -n "$BOOK_CONTEXT_DISPLAY" ]; then
 
     printf \
-        '<div class="bookctx"><span class="label">%s:</span> <span class="bookctx-text">%s</span></div>\n' \
+        '<aside class="bookctx"><span class="bookctx-label">%s</span><span class="bookctx-text">%s</span></aside>\n' \
         "$L_FROM_BOOK" \
         "$(format_inline "$BOOK_CONTEXT_DISPLAY")" \
         >> "$TMP"
@@ -1251,7 +1343,7 @@ fi
 if [ -n "$ELI5" ]; then
 
     printf \
-        '<div class="section eli5"><span class="label">ELI5:</span> %s</div>\n' \
+        '<aside class="eli5"><span class="eli5-label">ELI5</span>%s</aside>\n' \
         "$(format_inline "$ELI5")" \
         >> "$TMP"
 
@@ -1266,7 +1358,7 @@ render_field "$L_COLLOCATIONS" "$COLLOCATIONS"
 if [ -n "$EXAMPLE" ]; then
 
     printf \
-        '<div class="example"><span class="label">%s:</span> %s</div>\n' \
+        '<div class="example"><span class="example-label">%s</span>%s</div>\n' \
         "$L_EXAMPLE" \
         "$(format_inline "$EXAMPLE")" \
         >> "$TMP"
